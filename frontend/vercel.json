@@ -1,8 +1,6 @@
 {
-    "build": {
-        "env": {
-            "VITE_API_URL": "@vite_api_url"
-        }
+    "env": {
+        "VITE_API_URL": "https://medizen-api.onrender.com"
     },
     "rewrites": [
         {
