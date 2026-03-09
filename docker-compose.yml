@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: medizen_db
+    environment:
+      POSTGRES_USER: medizen_user
+      POSTGRES_PASSWORD: medizen_password
+      POSTGRES_DB: medizen_core
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  backend:
+    build: 
+      context: ./backend
+    container_name: medizen_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://medizen_user:medizen_password@db:5432/medizen_core
+    depends_on:
+      - db
+    volumes:
+      - ./backend:/app
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: medizen_frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    restart: always
+
+volumes:
+  postgres_data:

@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+@theme {
+    --font-sans: "Outfit", sans-serif;
+    --font-serif: "Playfair Display", serif;
+
+    --color-primary-50: #f0fdfa;
+    --color-primary-100: #ccfbf1;
+    --color-primary-600: #0d9488;
+    --color-primary-700: #0f766e;
+    --color-primary-800: #115e59;
+    --color-primary-900: #134e4a;
+
+    --color-accent-gold: #d4af37;
+    --color-accent-amber: #fef3c7;
+}
+
+body {
+    @apply bg-[#FAF8F5] text-slate-800 antialiased relative min-h-screen overflow-x-hidden;
+    letter-spacing: -0.015em;
+}
+
+/* Base Premium Background Canvas */
+body::before {
+    content: "";
+    position: fixed;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background:
+        radial-gradient(circle at 50% 10%, rgba(204, 251, 241, 0.4) 0%, transparent 40%),
+        radial-gradient(circle at 10% 40%, rgba(254, 243, 199, 0.4) 0%, transparent 40%),
+        radial-gradient(circle at 90% 70%, rgba(204, 251, 241, 0.3) 0%, transparent 50%);
+    z-index: -1;
+    pointer-events: none;
+    animation: bg-drift 30s ease-in-out infinite alternate;
+}
+
+@keyframes bg-drift {
+    0% {
+        transform: rotate(0deg) scale(1);
+    }
+
+    50% {
+        transform: rotate(3deg) scale(1.05);
+    }
+
+    100% {
+        transform: rotate(-3deg) scale(1);
+    }
+}
+
+/* Glass panel */
+.glass-panel {
+    @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_8px_30px_#0000000a];
+}
+
+.glass-panel-deep {
+    @apply bg-white/80 backdrop-blur-2xl border border-white/50 shadow-[0_20px_40px_#0000000f];
+}
+
+/* Inputs and interactive */
+.premium-input {
+    @apply w-full h-12 md:h-14 rounded-2xl border-white/60 bg-white/50 px-4 shadow-[inset_0_2px_4px_#00000005] transition-all flex items-center;
+    @apply hover:bg-white/70 focus:bg-white focus:ring-2 focus:ring-primary-600/20 focus:outline-none focus:border-primary-600;
+}
+
+.premium-textarea {
+    @apply w-full rounded-2xl border-white/60 bg-white/50 p-4 shadow-[inset_0_2px_4px_#00000005] transition-all resize-y;
+    @apply hover:bg-white/70 focus:bg-white focus:ring-2 focus:ring-primary-600/20 focus:outline-none focus:border-primary-600;
+}

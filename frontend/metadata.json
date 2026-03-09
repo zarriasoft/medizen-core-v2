@@ -1,0 +1,7 @@
+{
+  "name": "MediChina AI",
+  "description": "Asistente profesional de Medicina Tradicional China con diferenciación de síndromes por IA, chatbot especializado y síntesis de voz.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
