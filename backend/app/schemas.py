@@ -105,6 +105,35 @@ class Program(ProgramBase):
     class Config:
         orm_mode = True
 
+# --- MEMBERSHIP PLAN SCHEMAS ---
+class MembershipPlanBase(BaseModel):
+    name: str
+    price: str
+    frequency: str
+    features: str
+    color: Optional[str] = "slate"
+    is_popular: Optional[bool] = False
+
+class MembershipPlanCreate(MembershipPlanBase):
+    pass
+
+class MembershipPlanUpdate(BaseModel):
+    name: Optional[str] = None
+    price: Optional[str] = None
+    frequency: Optional[str] = None
+    features: Optional[str] = None
+    color: Optional[str] = None
+    is_popular: Optional[bool] = None
+    is_active: Optional[bool] = None
+
+class MembershipPlan(MembershipPlanBase):
+    id: int
+    is_active: bool
+
+    class Config:
+        orm_mode = True
+
+
 # --- MEMBERSHIP SCHEMAS ---
 class MembershipBase(BaseModel):
     membership_type: str
@@ -130,6 +159,13 @@ class Membership(MembershipBase):
     class Config:
         orm_mode = True
 
+class MembershipWithPatient(Membership):
+    patient_name: Optional[str] = None
+    patient_last_name: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
 # --- APPOINTMENT SCHEMAS ---
 class AppointmentBase(BaseModel):
     appointment_date: datetime
@@ -148,6 +184,7 @@ class AppointmentUpdate(BaseModel):
 class Appointment(AppointmentBase):
     id: int
     patient_id: int
+    membership_id: Optional[int] = None
     created_at: datetime
 
     class Config:

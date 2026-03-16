@@ -27,6 +27,11 @@ def read_patient_memberships(patient_id: int, db: Session = Depends(get_db)):
     memberships = crud.get_patient_memberships(db, patient_id=patient_id)
     return memberships
 
+@router.get("/", response_model=List[schemas.MembershipWithPatient])
+def read_all_memberships(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    memberships = crud.get_all_memberships(db, skip=skip, limit=limit)
+    return memberships
+
 @router.put("/{membership_id}", response_model=schemas.Membership)
 def update_membership(membership_id: int, membership_update: schemas.MembershipUpdate, db: Session = Depends(get_db)):
     db_membership = crud.update_membership(db, membership_id=membership_id, membership_update=membership_update)

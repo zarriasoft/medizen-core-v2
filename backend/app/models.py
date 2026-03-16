@@ -60,6 +60,19 @@ class Program(Base):
     default_sessions = Column(Integer)
     is_active = Column(Boolean, default=True)
 
+class MembershipPlan(Base):
+    __tablename__ = "membership_plans"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True) # Básica, Integrativa, Premium
+    price = Column(String)
+    frequency = Column(String) # mensual, anual
+    features = Column(String) # Comma-separated or JSON
+    color = Column(String, default="slate")
+    is_popular = Column(Boolean, default=False)
+    is_active = Column(Boolean, default=True)
+
+
 class Membership(Base):
     __tablename__ = "memberships"
 
@@ -79,12 +92,14 @@ class Appointment(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     patient_id = Column(Integer, ForeignKey("patients.id"))
+    membership_id = Column(Integer, ForeignKey("memberships.id"), nullable=True) # ID of the membership session used
     appointment_date = Column(DateTime)
     notes = Column(String, nullable=True)
     status = Column(String, default="Scheduled") # Scheduled, Completed, Cancelled
     created_at = Column(DateTime, default=datetime.utcnow)
 
     patient = relationship("Patient", back_populates="appointments")
+    membership = relationship("Membership")
 
 class ClinicalHistory(Base):
     __tablename__ = "clinical_histories"
