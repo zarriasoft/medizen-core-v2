@@ -11,6 +11,7 @@ import Programs from './pages/Programs';
 import Appointments from './pages/Appointments';
 import IEIM from './pages/IEIM';
 import Settings from './pages/Settings';
+import Capture from './pages/Capture';
 
 import { Toaster } from 'react-hot-toast';
 
@@ -45,6 +46,7 @@ function App() {
                 }} />
                 <Routes>
                     <Route path="/login" element={<Login />} />
+                    <Route path="/test" element={<Capture />} />
                     <Route path="/" element={
                         <PrivateRoute>
                             <Layout />

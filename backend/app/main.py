@@ -1,22 +1,28 @@
-import asyncio
 from contextlib import asynccontextmanager
+from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import engine, Base
-from .routers import patients, memberships, programs, dashboard, appointments, auth
-from .alerts import run_alerts_check_job
+from .routers import patients, memberships, programs, dashboard, appointments, auth, capture
+from .alerts import run_daily_alerts
+
+import logging
+logging.basicConfig(level=logging.INFO)
 
 # Crear las tablas en la BD (En prod se usa Alembic)
 Base.metadata.create_all(bind=engine)
 
+scheduler = BackgroundScheduler()
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Cargar cuando inicie FastAPI
-    task = asyncio.create_task(run_alerts_check_job())
+    # Ejecutar chequeo al arrancar y luego cada 24 horas
+    scheduler.add_job(run_daily_alerts, "interval", hours=24, id="daily_alerts")
+    scheduler.start()
+    run_daily_alerts()  # Primera ejecucion al arrancar
     yield
-    # Limpiar cuando se apague
-    task.cancel()
+    scheduler.shutdown(wait=False)
 
 app = FastAPI(title="MediZen Core 2.0 API", lifespan=lifespan)
 
@@ -34,6 +40,7 @@ app.include_router(memberships.router)
 app.include_router(programs.router)
 app.include_router(dashboard.router)
 app.include_router(appointments.router)
+app.include_router(capture.router)
 
 @app.get("/")
 def read_root():

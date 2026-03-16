@@ -9,6 +9,5 @@ bcrypt==3.2.2
 python-multipart>=0.0.12
 psycopg2-binary>=2.9.0
 alembic>=1.13.0
-
-
 email-validator
+apscheduler>=3.10.0
