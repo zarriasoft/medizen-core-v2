@@ -120,6 +120,28 @@ def get_patient_memberships(db: Session, patient_id: int):
              .filter(models.Membership.patient_id == patient_id, models.Membership.is_active == True)\
              .all()
 
+def get_all_memberships(db: Session, skip: int = 0, limit: int = 100):
+    memberships = db.query(
+        models.Membership, 
+        models.Patient.first_name.label('patient_name'), 
+        models.Patient.last_name.label('patient_last_name')
+    )\
+    .join(models.Patient, models.Membership.patient_id == models.Patient.id)\
+    .filter(models.Membership.is_active == True)\
+    .order_by(models.Membership.start_date.desc())\
+    .offset(skip).limit(limit).all()
+    
+    # Map to schema
+    result = []
+    for mem, p_name, p_lname in memberships:
+        # Create schema object from membership model
+        mem_schema = schemas.MembershipWithPatient.from_orm(mem)
+        mem_schema.patient_name = p_name
+        mem_schema.patient_last_name = p_lname
+        result.append(mem_schema)
+        
+    return result
+
 def update_membership(db: Session, membership_id: int, membership_update: schemas.MembershipUpdate):
     db_membership = get_membership(db, membership_id)
     if not db_membership:
@@ -138,9 +160,63 @@ def delete_membership(db: Session, membership_id: int):
     db.commit()
     return db_membership
 
+# --- MEMBERSHIP PLANS ---
+def get_membership_plans(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(models.MembershipPlan).offset(skip).limit(limit).all()
+
+def get_membership_plan(db: Session, plan_id: int):
+    return db.query(models.MembershipPlan).filter(models.MembershipPlan.id == plan_id).first()
+
+def create_membership_plan(db: Session, plan: schemas.MembershipPlanCreate):
+    db_plan = models.MembershipPlan(**plan.dict())
+    db.add(db_plan)
+    db.commit()
+    db.refresh(db_plan)
+    return db_plan
+
+def update_membership_plan(db: Session, plan_id: int, plan_update: schemas.MembershipPlanUpdate):
+    db_plan = get_membership_plan(db, plan_id)
+    if not db_plan:
+        return None
+    for key, value in plan_update.dict(exclude_unset=True).items():
+        setattr(db_plan, key, value)
+    db.commit()
+    db.refresh(db_plan)
+    return db_plan
+
+def delete_membership_plan(db: Session, plan_id: int):
+    db_plan = get_membership_plan(db, plan_id)
+    if not db_plan:
+        return None
+        
+    # Check if there are active memberships using this plan name
+    # We match by plan.name since Membership currently uses membership_type
+    active_memberships = db.query(models.Membership)\
+        .filter(models.Membership.membership_type == db_plan.name)\
+        .filter(models.Membership.is_active == True)\
+        .first()
+        
+    if active_memberships:
+        return {"error": f"Cannot delete plan '{db_plan.name}' because there are active memberships using it."}
+        
+    db_plan.is_active = False
+    db.commit()
+    return db_plan
+
 # --- APPOINTMENTS ---
 def create_appointment(db: Session, appointment: schemas.AppointmentCreate):
     db_appointment = models.Appointment(**appointment.dict())
+    
+    # Just link the membership if active, DO NOT deduct yet (deduct on completion)
+    active_membership = db.query(models.Membership)\
+                          .filter(models.Membership.patient_id == appointment.patient_id)\
+                          .filter(models.Membership.is_active == True)\
+                          .filter(models.Membership.used_sessions < models.Membership.total_sessions)\
+                          .first()
+                          
+    if active_membership:
+        db_appointment.membership_id = active_membership.id
+            
     db.add(db_appointment)
     db.commit()
     db.refresh(db_appointment)
@@ -164,8 +240,44 @@ def update_appointment(db: Session, appointment_id: int, appointment_update: sch
     db_appointment = get_appointment(db, appointment_id)
     if not db_appointment:
         return None
+        
+    old_status = db_appointment.status
+    
     for key, value in appointment_update.dict(exclude_unset=True).items():
         setattr(db_appointment, key, value)
+        
+    # If the status is moved FROM "Completed" to something else, we must REFUND the session
+    if old_status == "Completed" and db_appointment.status != "Completed" and db_appointment.membership_id:
+        membership = get_membership(db, db_appointment.membership_id)
+        if membership:
+            membership.used_sessions -= 1
+            if membership.used_sessions < membership.total_sessions:
+                membership.is_active = True
+                
+    # If the status is moved TO "Completed" from something else, we must DEDUCT the session
+    elif old_status != "Completed" and db_appointment.status == "Completed":
+        # First try to re-use the linked membership if it has space
+        linked_membership = get_membership(db, db_appointment.membership_id) if db_appointment.membership_id else None
+        
+        if linked_membership and linked_membership.used_sessions < linked_membership.total_sessions:
+            linked_membership.used_sessions += 1
+            if linked_membership.used_sessions >= linked_membership.total_sessions:
+                linked_membership.is_active = False
+        else:
+            # If not possible, try to find a new active one
+            active_membership = db.query(models.Membership)\
+                                  .filter(models.Membership.patient_id == db_appointment.patient_id)\
+                                  .filter(models.Membership.is_active == True)\
+                                  .filter(models.Membership.used_sessions < models.Membership.total_sessions)\
+                                  .first()
+            if active_membership:
+                active_membership.used_sessions += 1
+                db_appointment.membership_id = active_membership.id
+                if active_membership.used_sessions >= active_membership.total_sessions:
+                    active_membership.is_active = False
+            else:
+                db_appointment.membership_id = None # Clear it if we couldn't get a session
+                
     db.commit()
     db.refresh(db_appointment)
     return db_appointment
@@ -174,27 +286,52 @@ def delete_appointment(db: Session, appointment_id: int):
     db_appointment = get_appointment(db, appointment_id)
     if not db_appointment:
         return None
+        
+    # Only refund if it was Completed!
+    if db_appointment.status == "Completed" and db_appointment.membership_id:
+        membership = get_membership(db, db_appointment.membership_id)
+        if membership:
+            membership.used_sessions -= 1
+            if membership.used_sessions < membership.total_sessions:
+                membership.is_active = True
+                
     db.delete(db_appointment)
     db.commit()
+    return db_appointment
 def complete_appointment(db: Session, appointment_id: int, notes: str):
     db_appointment = get_appointment(db, appointment_id)
     if not db_appointment:
         return None
         
+    old_status = db_appointment.status
     db_appointment.status = "Completed"
+    
     if notes:
         db_appointment.notes = notes
-    
-    # Check for active membership to deduct
-    active_membership = db.query(models.Membership)\
-                          .filter(models.Membership.patient_id == db_appointment.patient_id)\
-                          .filter(models.Membership.is_active == True)\
-                          .filter(models.Membership.used_sessions < models.Membership.total_sessions)\
-                          .first()
-                          
-    if active_membership:
-        active_membership.used_sessions += 1
         
+    # Deduct membership session here IF it wasn't already completed
+    if old_status != "Completed":
+        linked_membership = get_membership(db, db_appointment.membership_id) if db_appointment.membership_id else None
+        
+        if linked_membership and linked_membership.used_sessions < linked_membership.total_sessions:
+            linked_membership.used_sessions += 1
+            if linked_membership.used_sessions >= linked_membership.total_sessions:
+                linked_membership.is_active = False
+        else:
+            # Try to find a new active one
+            active_membership = db.query(models.Membership)\
+                                  .filter(models.Membership.patient_id == db_appointment.patient_id)\
+                                  .filter(models.Membership.is_active == True)\
+                                  .filter(models.Membership.used_sessions < models.Membership.total_sessions)\
+                                  .first()
+            if active_membership:
+                active_membership.used_sessions += 1
+                db_appointment.membership_id = active_membership.id
+                if active_membership.used_sessions >= active_membership.total_sessions:
+                    active_membership.is_active = False
+            else:
+                db_appointment.membership_id = None
+
     # Create Clinical History log
     hist_log = models.ClinicalHistory(
         patient_id=db_appointment.patient_id,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Plus, X, Clock, User, ChevronLeft, ChevronRight, Search, Download } from 'lucide-react';
+import { Calendar, Plus, X, Clock, User, ChevronLeft, ChevronRight, Search, Download, CheckCircle, Edit, Trash2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { appointmentsApi, patientsApi, Appointment } from '../services/api';
@@ -184,15 +184,16 @@ export default function Appointments() {
                     <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
                         <h2 className="font-semibold text-slate-800">Todas las Citas</h2>
                     </div>
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-slate-50/50 text-slate-500 text-xs uppercase tracking-wider">
-                                <th className="p-4 font-medium border-b border-slate-100">Fecha y Hora</th>
-                                <th className="p-4 font-medium border-b border-slate-100">Paciente</th>
-                                <th className="p-4 font-medium border-b border-slate-100">Estado</th>
-                                <th className="p-4 font-medium border-b border-slate-100">Notas</th>
-                                <th className="p-4 font-medium border-b border-slate-100 text-right">Acciones</th>
-                            </tr>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse whitespace-nowrap">
+                            <thead>
+                                <tr className="bg-slate-50/50 text-slate-500 text-xs uppercase tracking-wider">
+                                    <th className="p-4 font-medium border-b border-slate-100">Fecha y Hora</th>
+                                    <th className="p-4 font-medium border-b border-slate-100">Paciente</th>
+                                    <th className="p-4 font-medium border-b border-slate-100">Estado</th>
+                                    <th className="p-4 font-medium border-b border-slate-100">Notas</th>
+                                    <th className="p-4 font-medium border-b border-slate-100 text-right min-w-[120px]">Acciones</th>
+                                </tr>
                         </thead>
                         <tbody className="text-sm divide-y divide-slate-100">
                             {appointmentsList.map((appt) => (
@@ -216,12 +217,18 @@ export default function Appointments() {
                                     </td>
                                     <td className="p-4 text-slate-500 truncate max-w-xs">{appt.notes || '--'}</td>
                                     <td className="p-4 text-right">
-                                        <div className="flex items-center justify-end gap-3">
+                                        <div className="flex items-center justify-end gap-2">
                                             {appt.status !== 'Completed' && (
-                                                <button onClick={() => openCompleteModal(appt)} className="text-emerald-600 font-medium hover:text-emerald-700 text-sm">Completar</button>
+                                                <button onClick={() => openCompleteModal(appt)} title="Completar cita" className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">
+                                                    <CheckCircle className="w-4 h-4" />
+                                                </button>
                                             )}
-                                            <button onClick={() => openEditModal(appt)} className="text-teal-600 font-medium hover:text-teal-700 text-sm">Modificar</button>
-                                            <button onClick={() => handleDelete(appt.id)} className="text-red-500 font-medium hover:text-red-600 text-sm">Eliminar</button>
+                                            <button onClick={() => openEditModal(appt)} title="Modificar cita" className="p-1.5 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors">
+                                                <Edit className="w-4 h-4" />
+                                            </button>
+                                            <button onClick={() => handleDelete(appt.id)} title="Eliminar cita" className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -235,6 +242,7 @@ export default function Appointments() {
                             )}
                         </tbody>
                     </table>
+                    </div>
                 </div>
 
                 {/* Today's Schedule Sidebar */}
