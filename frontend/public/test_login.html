@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Login</title>
+</head>
+<body>
+    <h1>Test Backend Login</h1>
+    <form id="loginForm">
+        <input type="text" id="username" value="admin" placeholder="Username"><br><br>
+        <input type="password" id="password" value="adminpassword" placeholder="Password"><br><br>
+        <button type="submit">Login</button>
+    </form>
+    <pre id="result"></pre>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            
+            const formData = new URLSearchParams();
+            formData.append('username', u);
+            formData.append('password', p);
+
+            try {
+                const res = await fetch('http://127.0.0.1:8000/auth/login', {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                });
+                
+                const data = await res.json();
+                if (res.ok) {
+                    document.getElementById('result').innerText = 'Success! Token: ' + data.access_token.substring(0, 20) + '...';
+                } else {
+                    document.getElementById('result').innerText = 'Failed: ' + JSON.stringify(data);
+                }
+            } catch (err) {
+                document.getElementById('result').innerText = 'Network Error: ' + err.message;
+            }
+        });
+    </script>
+</body>
+</html>

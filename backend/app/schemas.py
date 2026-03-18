@@ -108,6 +108,7 @@ class Program(ProgramBase):
 # --- MEMBERSHIP PLAN SCHEMAS ---
 class MembershipPlanBase(BaseModel):
     name: str
+    description: Optional[str] = None
     price: str
     frequency: str
     features: str
@@ -119,6 +120,7 @@ class MembershipPlanCreate(MembershipPlanBase):
 
 class MembershipPlanUpdate(BaseModel):
     name: Optional[str] = None
+    description: Optional[str] = None
     price: Optional[str] = None
     frequency: Optional[str] = None
     features: Optional[str] = None

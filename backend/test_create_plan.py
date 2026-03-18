@@ -2,7 +2,7 @@ import requests
 
 # Test creating a membership plan on the local and production backends
 
-prod_url = "https://medizen-backend.onrender.com/membership-plans/"
+prod_url = "https://medizen-api.onrender.com/membership-plans/"
 
 data = {
     "name": "Test Plan",

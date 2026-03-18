@@ -65,6 +65,7 @@ class MembershipPlan(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True) # Básica, Integrativa, Premium
+    description = Column(String, nullable=True) # Nuevo campo: Ej "Equilibra tu energía"
     price = Column(String)
     frequency = Column(String) # mensual, anual
     features = Column(String) # Comma-separated or JSON

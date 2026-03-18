@@ -40,7 +40,8 @@ const Login: React.FC = () => {
             navigate('/');
         } catch (error: any) {
             console.error('Login error:', error);
-            toast.error('Credenciales incorrectas. Por favor, intente nuevamente.');
+            const errorMsg = error.response?.data?.detail || error.message || 'Error desconocido';
+            toast.error(`Error: ${errorMsg}`);
         } finally {
             setIsLoading(false);
         }

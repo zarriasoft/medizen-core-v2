@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 const api = axios.create({
     baseURL: API_URL,
@@ -77,6 +77,10 @@ export const patientsApi = {
 };
 
 export const membershipsApi = {
+    getAll: async () => {
+        const response = await api.get('/memberships/');
+        return response.data;
+    },
     getPatientMemberships: async (patientId: number) => {
         const response = await api.get(`/memberships/patient/${patientId}`);
         return response.data;
@@ -91,6 +95,25 @@ export const membershipsApi = {
     },
     delete: async (id: number) => {
         const response = await api.delete(`/memberships/${id}`);
+        return response.data;
+    }
+};
+
+export const membershipPlansApi = {
+    getAll: async () => {
+        const response = await api.get('/membership-plans/');
+        return response.data;
+    },
+    create: async (data: any) => {
+        const response = await api.post('/membership-plans/', data);
+        return response.data;
+    },
+    update: async (id: number, data: any) => {
+        const response = await api.put(`/membership-plans/${id}`, data);
+        return response.data;
+    },
+    delete: async (id: number) => {
+        const response = await api.delete(`/membership-plans/${id}`);
         return response.data;
     }
 };

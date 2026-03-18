@@ -96,6 +96,7 @@ export default function Memberships() {
         setPlanValue('price', plan.price);
         setPlanValue('frequency', plan.frequency);
         setPlanValue('features', plan.features);
+        setPlanValue('description', plan.description);
         setPlanValue('color', plan.color);
         setPlanValue('is_popular', plan.is_popular);
         setIsPlanModalOpen(true);
@@ -238,7 +239,7 @@ export default function Memberships() {
                                 <span className="text-slate-500 text-sm">/{plan.frequency}</span>
                             </div>
 
-                            <ul className="space-y-3 mb-8 flex-1">
+                            <ul className="space-y-3 mb-4 flex-1">
                                 {featureList.map((feature: string, i: number) => (
                                     <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
                                         <Zap className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
@@ -246,6 +247,12 @@ export default function Memberships() {
                                     </li>
                                 ))}
                             </ul>
+
+                            {plan.description && (
+                                <div className="mt-auto pt-4 border-t border-slate-100 text-center italic text-slate-500 text-sm">
+                                    "{plan.description}"
+                                </div>
+                            )}
                         </div>
                     )})}
                     {plans.length === 0 && (
@@ -371,8 +378,12 @@ export default function Memberships() {
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Beneficios / Características</label>
-                                    <textarea required {...regPlan("features")} placeholder="Ej: 1 Sesión presencial al mes, Acceso a App Básica (Separados por coma)" rows={3} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all"></textarea>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Beneficios / Características (3 Puntos)</label>
+                                    <textarea required {...regPlan("features")} placeholder="Ej: 2 sesiones de Acupuntura, 1 sesión Cama de Cuarzo, 10% de descuento (Separados por coma)" rows={3} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all"></textarea>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Nota Inferior / Descripción corta</label>
+                                    <input type="text" {...regPlan("description")} placeholder="Ej: Equilibra tu energía y salud" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all" />
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <input type="checkbox" id="is_popular" {...regPlan("is_popular")} className="w-4 h-4 text-teal-600 rounded border-gray-300" />
