@@ -125,3 +125,59 @@ def submit_capture_form(form: CaptureFormData, db: Session = Depends(get_db)):
         classification=classification,
         recommendation=recommendation,
     )
+
+
+class EnrollRequest(BaseModel):
+    first_name: str
+    last_name: str
+    email: EmailStr
+    phone: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    plan_name: str
+
+class EnrollResponse(BaseModel):
+    message: str
+
+@router.post("/enroll", response_model=EnrollResponse)
+def enroll_patient(form: EnrollRequest, db: Session = Depends(get_db)):
+    from ..models import Membership
+    
+    # Check if patient exists
+    patient = db.query(Patient).filter(Patient.email == form.email).first()
+    if not patient:
+        patient = Patient(
+            first_name=form.first_name,
+            last_name=form.last_name,
+            email=form.email,
+            phone=form.phone,
+            date_of_birth=form.date_of_birth if form.date_of_birth else None,
+            created_at=datetime.utcnow(),
+            is_active=True,
+        )
+        db.add(patient)
+        db.commit()
+        db.refresh(patient)
+    else:
+        if form.phone and not patient.phone:
+            patient.phone = form.phone
+        if form.date_of_birth and not patient.date_of_birth:
+            patient.date_of_birth = form.date_of_birth
+        db.commit()
+
+    # Create membership record based on user requirement
+    membership = Membership(
+        patient_id=patient.id,
+        membership_type=form.plan_name,
+        start_date=datetime.utcnow(),
+        end_date=None, # left blank intentionally
+        total_sessions=0, # working with sessions initially 0 or default
+        used_sessions=0,
+        is_active=False # inactive status (pending payment)
+    )
+    db.add(membership)
+    db.commit()
+
+    return EnrollResponse(
+        message=f"Inscripción recibida. Nos pondremos en contacto a la brevedad."
+    )
+

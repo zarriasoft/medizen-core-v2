@@ -65,6 +65,16 @@ const staticPlans = [
 
 function App() {
     const [plans, setPlans] = React.useState<any[]>(staticPlans);
+    const [isEnrollModalOpen, setIsEnrollModalOpen] = React.useState(false);
+    const [selectedPlan, setSelectedPlan] = React.useState('');
+    const [enrollForm, setEnrollForm] = React.useState({
+        first_name: '',
+        last_name: '',
+        email: '',
+        phone: '',
+        date_of_birth: ''
+    });
+    const [enrollStatus, setEnrollStatus] = React.useState<'idle' | 'loading' | 'success' | 'error'>('idle');
 
     useEffect(() => {
         trackVisit();
@@ -140,7 +150,36 @@ function App() {
     const handleSubscribe = (planName: string) => {
         // Track the click before routing
         console.log(`User clicked subscribe on ${planName}`);
-        alert(`Redirigiendo a pago/suscripción para: ${planName}`);
+        setSelectedPlan(planName);
+        setIsEnrollModalOpen(true);
+        setEnrollStatus('idle');
+        setEnrollForm({
+            first_name: '',
+            last_name: '',
+            email: '',
+            phone: '',
+            date_of_birth: ''
+        });
+    };
+
+    const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setEnrollForm({ ...enrollForm, [e.target.name]: e.target.value });
+    };
+
+    const handleEnrollSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setEnrollStatus('loading');
+        try {
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+            await axios.post(`${apiUrl}/public/enroll`, {
+                ...enrollForm,
+                plan_name: selectedPlan
+            });
+            setEnrollStatus('success');
+        } catch (error) {
+            console.error(error);
+            setEnrollStatus('error');
+        }
     };
 
     return (
@@ -331,6 +370,96 @@ function App() {
                     <MessageCircle className="w-7 h-7" />
                 </button>
             </div>
+
+            {/* Enrollment Modal */}
+            {isEnrollModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden relative"
+                    >
+                        {/* Close button */}
+                        <button 
+                            onClick={() => setIsEnrollModalOpen(false)}
+                            className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors z-10"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                            </svg>
+                        </button>
+
+                        <div className="p-6 md:p-8">
+                            {enrollStatus === 'success' ? (
+                                <div className="text-center py-6">
+                                    <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <Check className="w-8 h-8 text-emerald-600" />
+                                    </div>
+                                    <h3 className="text-2xl font-bold text-slate-800 mb-2">¡Inscripción Exitosa!</h3>
+                                    <p className="text-slate-600 mb-6">
+                                        Tus datos se han registrado correctamente. Muy pronto nuestro equipo se contactará contigo para coordinar el pago y activar tu plan <strong>{selectedPlan}</strong>.
+                                    </p>
+                                    <button 
+                                        onClick={() => setIsEnrollModalOpen(false)}
+                                        className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-xl transition-colors"
+                                    >
+                                        Cerrar
+                                    </button>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="mb-6">
+                                        <h3 className="text-2xl font-bold text-brand-dark mb-1">Únete a MediZen</h3>
+                                        <p className="text-slate-500 text-sm">Estás a un paso de acceder al plan <strong>{selectedPlan}</strong>. Ingresa tus datos a continuación.</p>
+                                    </div>
+
+                                    {enrollStatus === 'error' && (
+                                        <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
+                                            Ocurrió un error al enviar tu solicitud. Por favor intenta de nuevo.
+                                        </div>
+                                    )}
+
+                                    <form onSubmit={handleEnrollSubmit} className="space-y-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-700 mb-1">Nombre</label>
+                                                <input required type="text" name="first_name" value={enrollForm.first_name} onChange={handleFormChange} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500" placeholder="Ej: Juan" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-700 mb-1">Apellido</label>
+                                                <input required type="text" name="last_name" value={enrollForm.last_name} onChange={handleFormChange} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500" placeholder="Ej: Perez" />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-slate-700 mb-1">Correo Electrónico</label>
+                                            <input required type="email" name="email" value={enrollForm.email} onChange={handleFormChange} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500" placeholder="tucorreo@ejemplo.com" />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-700 mb-1">Teléfono</label>
+                                                <input required type="tel" name="phone" value={enrollForm.phone} onChange={handleFormChange} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500" placeholder="+56 9 XXXXXXXX" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-700 mb-1">Fecha de Nac. (Opcional)</label>
+                                                <input type="date" name="date_of_birth" value={enrollForm.date_of_birth} onChange={handleFormChange} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500" />
+                                            </div>
+                                        </div>
+                                        <div className="pt-4">
+                                            <button 
+                                                type="submit" 
+                                                disabled={enrollStatus === 'loading'}
+                                                className={`w-full py-3 px-4 rounded-xl text-white font-bold flex justify-center items-center transition-all ${enrollStatus === 'loading' ? 'bg-slate-400 cursor-not-allowed' : 'bg-brand-dark hover:bg-slate-800 active:scale-95 shadow-lg'}`}
+                                            >
+                                                {enrollStatus === 'loading' ? 'Enviando...' : 'Confirmar Datos e Inscribirme'}
+                                            </button>
+                                        </div>
+                                    </form>
+                                </>
+                            )}
+                        </div>
+                    </motion.div>
+                </div>
+            )}
         </div>
     );
 }
