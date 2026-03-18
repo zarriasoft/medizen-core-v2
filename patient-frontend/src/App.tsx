@@ -100,15 +100,23 @@ function App() {
                                 headerColor = "bg-indigo-50";
                             }
                             
-                            // Parse commma separated features to array
-                            const featureArray = p.features ? p.features.split(',').map((f: string) => f.trim()) : [];
+                            // Parse comma or newline separated features to array
+                            const rawFeatures = p.features ? p.features.split(/[\n,]+/) : [];
+                            const featureArray = rawFeatures
+                                .map((f: string) => f.replace(/^-\s*/, '').trim())
+                                .filter(Boolean);
                             
-                            // Fill missing features to ensure at least 3 points are shown according to design, 
-                            // if they exist.
+                            // Format price (allow for text like "$45,000")
+                            const numericString = String(p.price).replace(/[^0-9]/g, '');
+                            const numericPrice = Number(numericString);
+                            // If it parsed to a valid number and isn't empty, format it. Otherwise keep the original text.
+                            const formattedPrice = (numericString && !isNaN(numericPrice)) 
+                                ? "$" + numericPrice.toLocaleString('es-CL') 
+                                : p.price;
                             
                             return {
                                 name: p.name,
-                                price: p.price, // the price text from db
+                                price: formattedPrice,
                                 period: `/${p.frequency}`,
                                 description: p.description || "",
                                 features: featureArray,
