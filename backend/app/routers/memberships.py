@@ -28,7 +28,7 @@ def read_patient_memberships(patient_id: int, db: Session = Depends(get_db)):
     return memberships
 
 @router.get("/", response_model=List[schemas.MembershipWithPatient])
-def read_all_memberships(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def read_all_memberships(skip: int = 0, limit: int = 10000, db: Session = Depends(get_db)):
     memberships = crud.get_all_memberships(db, skip=skip, limit=limit)
     return memberships
 

@@ -49,8 +49,8 @@ def get_patient(db: Session, patient_id: int):
 def get_patient_by_email(db: Session, email: str):
     return db.query(models.Patient).filter(models.Patient.email == email).first()
 
-def get_patients(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Patient).offset(skip).limit(limit).all()
+def get_patients(db: Session, skip: int = 0, limit: int = 10000):
+    return db.query(models.Patient).order_by(models.Patient.first_name.asc(), models.Patient.last_name.asc()).offset(skip).limit(limit).all()
 
 def create_patient(db: Session, patient: schemas.PatientCreate):
     db_patient = models.Patient(**patient.dict())
@@ -120,7 +120,7 @@ def get_patient_memberships(db: Session, patient_id: int):
              .filter(models.Membership.patient_id == patient_id, models.Membership.is_active == True)\
              .all()
 
-def get_all_memberships(db: Session, skip: int = 0, limit: int = 100):
+def get_all_memberships(db: Session, skip: int = 0, limit: int = 10000):
     memberships = db.query(
         models.Membership, 
         models.Patient.first_name.label('patient_name'), 
@@ -161,8 +161,8 @@ def delete_membership(db: Session, membership_id: int):
     return db_membership
 
 # --- MEMBERSHIP PLANS ---
-def get_membership_plans(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.MembershipPlan).offset(skip).limit(limit).all()
+def get_membership_plans(db: Session, skip: int = 0, limit: int = 1000):
+    return db.query(models.MembershipPlan).order_by(models.MembershipPlan.id.asc()).offset(skip).limit(limit).all()
 
 def get_membership_plan(db: Session, plan_id: int):
     return db.query(models.MembershipPlan).filter(models.MembershipPlan.id == plan_id).first()
@@ -228,7 +228,7 @@ def get_patient_appointments(db: Session, patient_id: int):
              .order_by(models.Appointment.appointment_date.desc())\
              .all()
 
-def get_all_appointments(db: Session, skip: int = 0, limit: int = 100):
+def get_all_appointments(db: Session, skip: int = 0, limit: int = 10000):
     return db.query(models.Appointment)\
              .order_by(models.Appointment.appointment_date.desc())\
              .offset(skip).limit(limit).all()

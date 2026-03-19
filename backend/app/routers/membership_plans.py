@@ -11,7 +11,7 @@ router = APIRouter(
 )
 
 @router.get("/", response_model=List[schemas.MembershipPlan])
-def read_membership_plans(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def read_membership_plans(skip: int = 0, limit: int = 10000, db: Session = Depends(get_db)):
     plans = crud.get_membership_plans(db, skip=skip, limit=limit)
     return plans
 

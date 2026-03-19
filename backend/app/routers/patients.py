@@ -19,7 +19,7 @@ def create_patient(patient: schemas.PatientCreate, db: Session = Depends(get_db)
     return crud.create_patient(db=db, patient=patient)
 
 @router.get("/", response_model=List[schemas.Patient])
-def read_patients(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def read_patients(skip: int = 0, limit: int = 10000, db: Session = Depends(get_db)):
     return crud.get_patients(db, skip=skip, limit=limit)
 
 @router.get("/{patient_id}", response_model=schemas.Patient)

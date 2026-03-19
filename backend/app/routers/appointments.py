@@ -19,7 +19,7 @@ def create_appointment(appointment: schemas.AppointmentCreate, db: Session = Dep
     return crud.create_appointment(db=db, appointment=appointment)
 
 @router.get("/", response_model=List[schemas.Appointment])
-def read_all_appointments(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def read_all_appointments(skip: int = 0, limit: int = 10000, db: Session = Depends(get_db)):
     return crud.get_all_appointments(db, skip=skip, limit=limit)
 
 @router.get("/patient/{patient_id}", response_model=List[schemas.Appointment])

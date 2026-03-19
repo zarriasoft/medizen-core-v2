@@ -12,7 +12,7 @@ router = APIRouter(
 )
 
 @router.get("/", response_model=List[schemas.Program])
-def read_programs(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def read_programs(skip: int = 0, limit: int = 10000, db: Session = Depends(get_db)):
     return crud.get_programs(db, skip=skip, limit=limit)
 
 @router.post("/", response_model=schemas.Program)
