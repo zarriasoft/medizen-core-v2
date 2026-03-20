@@ -71,6 +71,7 @@ class MembershipPlan(Base):
     features = Column(String) # Comma-separated or JSON
     color = Column(String, default="slate")
     is_popular = Column(Boolean, default=False)
+    total_sessions = Column(Integer, default=1)
     is_active = Column(Boolean, default=True)
 
 

@@ -142,6 +142,14 @@ class EnrollResponse(BaseModel):
 def enroll_patient(form: EnrollRequest, db: Session = Depends(get_db)):
     from ..models import Membership
     
+    parsed_dob = None
+    if form.date_of_birth:
+        try:
+            # HTML5 date inputs send data in YYYY-MM-DD format
+            parsed_dob = datetime.strptime(form.date_of_birth, "%Y-%m-%d").date()
+        except ValueError:
+            pass
+
     # Check if patient exists
     patient = db.query(Patient).filter(Patient.email == form.email).first()
     if not patient:
@@ -150,7 +158,7 @@ def enroll_patient(form: EnrollRequest, db: Session = Depends(get_db)):
             last_name=form.last_name,
             email=form.email,
             phone=form.phone,
-            date_of_birth=form.date_of_birth if form.date_of_birth else None,
+            date_of_birth=parsed_dob,
             created_at=datetime.utcnow(),
             is_active=True,
         )
@@ -160,9 +168,13 @@ def enroll_patient(form: EnrollRequest, db: Session = Depends(get_db)):
     else:
         if form.phone and not patient.phone:
             patient.phone = form.phone
-        if form.date_of_birth and not patient.date_of_birth:
-            patient.date_of_birth = form.date_of_birth
+        if parsed_dob and not patient.date_of_birth:
+            patient.date_of_birth = parsed_dob
         db.commit()
+
+    from app import crud
+    plan = crud.get_membership_plan_by_name(db, form.plan_name)
+    sessions = plan.total_sessions if plan and plan.total_sessions else 1
 
     # Create membership record based on user requirement
     membership = Membership(
@@ -170,7 +182,7 @@ def enroll_patient(form: EnrollRequest, db: Session = Depends(get_db)):
         membership_type=form.plan_name,
         start_date=datetime.utcnow(),
         end_date=None, # left blank intentionally
-        total_sessions=0, # working with sessions initially 0 or default
+        total_sessions=sessions, # from the configured plan parameter
         used_sessions=0,
         is_active=False # inactive status (pending payment)
     )

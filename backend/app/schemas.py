@@ -114,6 +114,7 @@ class MembershipPlanBase(BaseModel):
     features: str
     color: Optional[str] = "slate"
     is_popular: Optional[bool] = False
+    total_sessions: Optional[int] = 1
 
 class MembershipPlanCreate(MembershipPlanBase):
     pass
@@ -126,6 +127,7 @@ class MembershipPlanUpdate(BaseModel):
     features: Optional[str] = None
     color: Optional[str] = None
     is_popular: Optional[bool] = None
+    total_sessions: Optional[int] = None
     is_active: Optional[bool] = None
 
 class MembershipPlan(MembershipPlanBase):

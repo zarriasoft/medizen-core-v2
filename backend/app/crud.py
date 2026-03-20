@@ -117,7 +117,7 @@ def get_membership(db: Session, membership_id: int):
 
 def get_patient_memberships(db: Session, patient_id: int):
     return db.query(models.Membership)\
-             .filter(models.Membership.patient_id == patient_id, models.Membership.is_active == True)\
+             .filter(models.Membership.patient_id == patient_id)\
              .all()
 
 def get_all_memberships(db: Session, skip: int = 0, limit: int = 10000):
@@ -127,7 +127,6 @@ def get_all_memberships(db: Session, skip: int = 0, limit: int = 10000):
         models.Patient.last_name.label('patient_last_name')
     )\
     .join(models.Patient, models.Membership.patient_id == models.Patient.id)\
-    .filter(models.Membership.is_active == True)\
     .order_by(models.Membership.start_date.desc())\
     .offset(skip).limit(limit).all()
     
@@ -166,6 +165,9 @@ def get_membership_plans(db: Session, skip: int = 0, limit: int = 1000):
 
 def get_membership_plan(db: Session, plan_id: int):
     return db.query(models.MembershipPlan).filter(models.MembershipPlan.id == plan_id).first()
+
+def get_membership_plan_by_name(db: Session, plan_name: str):
+    return db.query(models.MembershipPlan).filter(models.MembershipPlan.name == plan_name).first()
 
 def create_membership_plan(db: Session, plan: schemas.MembershipPlanCreate):
     db_plan = models.MembershipPlan(**plan.dict())
