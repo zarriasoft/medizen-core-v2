@@ -23,7 +23,7 @@ export default function Memberships() {
     const [editingAssignedId, setEditingAssignedId] = useState<number | null>(null);
 
     // Forms
-    const { register: regVenta, handleSubmit: handleVenta, reset: resetVenta } = useForm();
+    const { register: regVenta, handleSubmit: handleVenta, reset: resetVenta, setValue: setVentaValue } = useForm();
     const { register: regPlan, handleSubmit: handlePlan, reset: resetPlan, setValue: setPlanValue } = useForm();
     const { register: regEditAssigned, handleSubmit: handleEditAssigned, reset: resetEditAssigned, setValue: setEditAssignedValue } = useForm();
 
@@ -98,13 +98,14 @@ export default function Memberships() {
         setPlanValue('features', plan.features);
         setPlanValue('description', plan.description);
         setPlanValue('color', plan.color);
+        setPlanValue('total_sessions', plan.total_sessions || 1);
         setPlanValue('is_popular', plan.is_popular);
         setIsPlanModalOpen(true);
     };
 
     const onSavePlan = async (data: any) => {
         try {
-            const payload = { ...data, is_popular: Boolean(data.is_popular) };
+            const payload = { ...data, is_popular: Boolean(data.is_popular), total_sessions: parseInt(data.total_sessions) || 1 };
             if (editingPlanId) {
                 await membershipPlansApi.update(editingPlanId, payload);
                 toast.success("Plan actualizado");
@@ -385,9 +386,15 @@ export default function Memberships() {
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Nota Inferior / Descripción corta</label>
                                     <input type="text" {...regPlan("description")} placeholder="Ej: Equilibra tu energía y salud" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all" />
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <input type="checkbox" id="is_popular" {...regPlan("is_popular")} className="w-4 h-4 text-teal-600 rounded border-gray-300" />
-                                    <label htmlFor="is_popular" className="text-sm font-medium text-slate-700">Marcar como "Más Elegido" (Destacado)</label>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Sesiones Totales del Plan</label>
+                                        <input required type="number" {...regPlan("total_sessions")} min="1" defaultValue="1" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all" />
+                                    </div>
+                                    <div className="flex items-center gap-2 pt-6">
+                                        <input type="checkbox" id="is_popular" {...regPlan("is_popular")} className="w-4 h-4 text-teal-600 rounded border-gray-300" />
+                                        <label htmlFor="is_popular" className="text-sm font-medium text-slate-700">Marcar como "Destacado"</label>
+                                    </div>
                                 </div>
                             </div>
                             <div className="mt-8 flex justify-end gap-3 pt-4 border-t border-slate-50">
@@ -457,7 +464,14 @@ export default function Memberships() {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de Plan</label>
-                                        <select required {...regVenta("membership_type")} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all">
+                                        <select required {...regVenta("membership_type", {
+                                            onChange: (e) => {
+                                                const selectedPlan = plans.find(p => p.name === e.target.value);
+                                                if (selectedPlan) {
+                                                    setVentaValue("total_sessions", selectedPlan.total_sessions || 1);
+                                                }
+                                            }
+                                        })} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all">
                                             <option value="">Seleccionar</option>
                                             {plans.map(p => (
                                                 <option key={p.id} value={p.name}>{p.name}</option>

@@ -17,54 +17,10 @@ const trackVisit = async () => {
     }
 };
 
-const staticPlans = [
-    {
-        name: "Plan Básico",
-        price: "$39.000",
-        period: "/mes",
-        description: "Equilibra tu energía y salud",
-        features: [
-            "2 sesiones de Acupuntura",
-            "1 sesión Cama de Cuarzo Terapéutica",
-            "10% de descuento en otras terapias"
-        ],
-        buttonColor: "bg-emerald-600 hover:bg-emerald-700",
-        headerColor: "bg-emerald-50",
-        popular: false
-    },
-    {
-        name: "Plan Integrativo",
-        price: "$69.000",
-        period: "/mes",
-        description: "Cuerpo, mente, y emociones",
-        features: [
-            "Tratamiento Integral (Acupuntura + Neurociencia + Alimentacion)",
-            "1 sesión Cama de Cuarzo Emocional",
-            "1 Reflexología o Masaje Descontracturante"
-        ],
-        buttonColor: "bg-amber-600 hover:bg-amber-700",
-        headerColor: "bg-amber-50",
-        popular: true
-    },
-    {
-        name: "Plan Premium",
-        price: "$119.000",
-        period: "/mes",
-        description: "Bienestar y transformación",
-        features: [
-            "2 Tratamientos Integrales",
-            "2 sesiones Cama de Cuarzo",
-            "1 Masaje Descontracturante",
-            "1 Sesión de Reflexología"
-        ],
-        buttonColor: "bg-orange-600 hover:bg-orange-700",
-        headerColor: "bg-orange-50",
-        popular: false
-    }
-];
 
 function App() {
-    const [plans, setPlans] = React.useState<any[]>(staticPlans);
+    const [plans, setPlans] = React.useState<any[]>([]);
+    const [isLoadingPlans, setIsLoadingPlans] = React.useState(true);
     const [isEnrollModalOpen, setIsEnrollModalOpen] = React.useState(false);
     const [selectedPlan, setSelectedPlan] = React.useState('');
     const [enrollForm, setEnrollForm] = React.useState({
@@ -84,7 +40,12 @@ function App() {
             try {
                 // In production, this should use VITE_API_URL env variable
                 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-                const response = await axios.get(`${apiUrl}/membership-plans/`);
+                
+                // Expose globally for quick console debugging
+                (window as any).__VITE_API_URL = apiUrl;
+
+                // Add a timeout of 10s to avoid hanging forever on sleeping backends
+                const response = await axios.get(`${apiUrl}/membership-plans/`, { timeout: 10000 });
                 
                 if (response.data && response.data.length > 0) {
                     // Map backend data to frontend structure
@@ -137,10 +98,16 @@ function App() {
                         });
                         
                         setPlans(formattedPlans);
+                    } else {
+                        setPlans([]); // Fallback to empty if no active plans found
                     }
+                } else {
+                    setPlans([]); // Fallback to empty if no plans exist
                 }
             } catch (error) {
-                console.error("Error fetching plans from backend, using default static plans:", error);
+                console.error("Error fetching plans from backend:", error);
+            } finally {
+                setIsLoadingPlans(false);
             }
         };
         
@@ -256,8 +223,23 @@ function App() {
                      </span>
                 </div>
                 
-                <div className="grid md:grid-cols-3 gap-8 items-start lg:px-8">
-                    {plans.map((plan, index) => (
+                <div className={`grid gap-8 items-start lg:px-8 ${
+                    isLoadingPlans ? 'md:grid-cols-3' : 
+                    plans.length === 1 ? 'md:grid-cols-1 max-w-sm mx-auto' : 
+                    plans.length === 2 ? 'md:grid-cols-2 max-w-4xl mx-auto' : 
+                    'md:grid-cols-3'
+                }`}>
+                    {isLoadingPlans ? (
+                        <div className="col-span-full text-center py-20">
+                            <p className="text-slate-500">Cargando planes de membresía...</p>
+                            <p className="text-xs text-slate-400 mt-2">Conectando con: {import.meta.env.VITE_API_URL || 'http://localhost:8000'}</p>
+                        </div>
+                    ) : plans.length === 0 ? (
+                        <div className="col-span-full text-center py-20">
+                            <p className="text-slate-500">Actualmente no hay planes de membresía disponibles.</p>
+                        </div>
+                    ) : (
+                        plans.map((plan, index) => (
                         <motion.div 
                             initial={{ y: 50, opacity: 0 }}
                             whileInView={{ y: 0, opacity: 1 }}
@@ -304,7 +286,7 @@ function App() {
                                 </button>
                             </div>
                         </motion.div>
-                    ))}
+                    )))}
                 </div>
             </section>
 

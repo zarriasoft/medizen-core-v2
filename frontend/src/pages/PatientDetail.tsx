@@ -4,7 +4,7 @@ import { ArrowLeft, Plus, Activity, CreditCard } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { patientsApi, Patient, IeimRecord, membershipsApi } from '../services/api';
+import { patientsApi, Patient, IeimRecord, membershipsApi, membershipPlansApi } from '../services/api';
 
 type IeimFormData = Omit<IeimRecord, 'id' | 'patient_id' | 'record_date' | 'overall_score'>;
 
@@ -15,6 +15,7 @@ export default function PatientDetail() {
     const [patient, setPatient] = useState<Patient | null>(null);
     const [ieimRecords, setIeimRecords] = useState<IeimRecord[]>([]);
     const [memberships, setMemberships] = useState<any[]>([]);
+    const [availablePlans, setAvailablePlans] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -35,14 +36,16 @@ export default function PatientDetail() {
     const fetchData = async () => {
         try {
             setIsLoading(true);
-            const [patientData, recordsData, membershipsData] = await Promise.all([
+            const [patientData, recordsData, membershipsData, plansData] = await Promise.all([
                 patientsApi.getOne(patientId),
                 patientsApi.getIeimRecords(patientId),
-                membershipsApi.getPatientMemberships(patientId)
+                membershipsApi.getPatientMemberships(patientId),
+                membershipPlansApi.getAll()
             ]);
             setPatient(patientData);
             setIeimRecords(recordsData.sort((a, b) => new Date(a.record_date).getTime() - new Date(b.record_date).getTime()));
             setMemberships(membershipsData);
+            setAvailablePlans(plansData.filter((p: any) => p.is_active));
         } catch (error) {
             console.error("Error fetching patient details", error);
         } finally {
@@ -360,9 +363,10 @@ export default function PatientDetail() {
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de Plan</label>
                                 <select {...regMem("membership_type")} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-teal-500/50">
-                                    <option value="Básica">Básica</option>
-                                    <option value="Integrativa">Integrativa</option>
-                                    <option value="Premium Care">Premium Care</option>
+                                    <option value="">Seleccionar plan</option>
+                                    {availablePlans.map(p => (
+                                        <option key={p.id} value={p.name}>{p.name}</option>
+                                    ))}
                                 </select>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
