@@ -21,7 +21,9 @@ class Patient(Base):
     first_name = Column(String, index=True)
     last_name = Column(String, index=True)
     email = Column(String, unique=True, index=True)
+    hashed_password = Column(String, nullable=True)
     phone = Column(String)
+    address = Column(String, nullable=True)
     date_of_birth = Column(Date)
     created_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
@@ -114,3 +116,32 @@ class ClinicalHistory(Base):
     
     patient = relationship("Patient")
     appointment = relationship("Appointment")
+
+class SystemSettings(Base):
+    __tablename__ = "system_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    smtp_host = Column(String, default="smtp.gmail.com")
+    smtp_port = Column(Integer, default=587)
+    smtp_user = Column(String, default="")
+    smtp_password = Column(String, default="")
+    admin_email = Column(String, default="")
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class SpecialistSchedule(Base):
+    __tablename__ = "specialist_schedules"
+
+    id = Column(Integer, primary_key=True, index=True)
+    day_of_week = Column(Integer) # 0=Monday, 6=Sunday
+    start_time = Column(String) # HH:MM format
+    end_time = Column(String) # HH:MM format
+    is_active = Column(Boolean, default=True)
+
+class ScheduleOverride(Base):
+    __tablename__ = "schedule_overrides"
+
+    id = Column(Integer, primary_key=True, index=True)
+    override_date = Column(Date, unique=True)
+    is_day_off = Column(Boolean, default=True)
+    start_time = Column(String, nullable=True)
+    end_time = Column(String, nullable=True)

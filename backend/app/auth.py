@@ -50,3 +50,22 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     if user is None:
         raise credentials_exception
     return user
+
+def get_current_patient(token: str = Depends(oauth2_scheme), db: Session = Depends(database.get_db)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        role: str = payload.get("role")
+        if email is None or role != "patient":
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    patient = crud.get_patient_by_email(db, email=email)
+    if patient is None:
+        raise credentials_exception
+    return patient

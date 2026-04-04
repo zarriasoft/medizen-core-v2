@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import engine, Base
-from .routers import patients, memberships, membership_plans, programs, dashboard, appointments, auth, capture
+from .routers import patients, memberships, membership_plans, programs, dashboard, appointments, auth, capture, ai, settings, patient_portal
 from .alerts import run_daily_alerts
 
 import logging
@@ -55,6 +55,9 @@ app.include_router(programs.router)
 app.include_router(dashboard.router)
 app.include_router(appointments.router)
 app.include_router(capture.router)
+app.include_router(settings.router)
+app.include_router(ai.router)
+app.include_router(patient_portal.router)
 
 @app.get("/")
 def read_root():

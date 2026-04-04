@@ -1,13 +1,14 @@
 from sqlalchemy.orm import Session
 from . import models, schemas
 from datetime import datetime
+from sqlalchemy.sql import func
 
 # --- USERS ---
 def get_user_by_username(db: Session, username: str):
     return db.query(models.User).filter(models.User.username == username).first()
 
 def get_user_by_email(db: Session, email: str):
-    return db.query(models.User).filter(models.User.email == email).first()
+    return db.query(models.User).filter(func.lower(models.User.email) == email.lower()).first()
 
 def create_user(db: Session, user: schemas.UserCreate, hashed_password: str):
     db_user = models.User(
@@ -47,7 +48,7 @@ def get_patient(db: Session, patient_id: int):
     return db.query(models.Patient).filter(models.Patient.id == patient_id).first()
 
 def get_patient_by_email(db: Session, email: str):
-    return db.query(models.Patient).filter(models.Patient.email == email).first()
+    return db.query(models.Patient).filter(func.lower(models.Patient.email) == email.lower()).first()
 
 def get_patients(db: Session, skip: int = 0, limit: int = 10000):
     return db.query(models.Patient).order_by(models.Patient.first_name.asc(), models.Patient.last_name.asc()).offset(skip).limit(limit).all()
@@ -210,14 +211,16 @@ def create_appointment(db: Session, appointment: schemas.AppointmentCreate):
     db_appointment = models.Appointment(**appointment.dict())
     
     # Just link the membership if active, DO NOT deduct yet (deduct on completion)
-    active_membership = db.query(models.Membership)\
-                          .filter(models.Membership.patient_id == appointment.patient_id)\
-                          .filter(models.Membership.is_active == True)\
-                          .filter(models.Membership.used_sessions < models.Membership.total_sessions)\
-                          .first()
-                          
-    if active_membership:
-        db_appointment.membership_id = active_membership.id
+    # Only assign automatically if the frontend didn't already send one
+    if not db_appointment.membership_id:
+        active_membership = db.query(models.Membership)\
+                              .filter(models.Membership.patient_id == appointment.patient_id)\
+                              .filter(models.Membership.is_active == True)\
+                              .filter(models.Membership.used_sessions < models.Membership.total_sessions)\
+                              .first()
+                              
+        if active_membership:
+            db_appointment.membership_id = active_membership.id
             
     db.add(db_appointment)
     db.commit()
@@ -371,8 +374,93 @@ def update_program(db: Session, program_id: int, program_update: schemas.Program
 
 def delete_program(db: Session, program_id: int):
     db_program = get_program(db, program_id)
-    if not db_program:
-        return None
     db_program.is_active = False
     db.commit()
     return db_program
+
+# --- AVAILABILITY ---
+def get_availability(db: Session, target_date: datetime.date):
+    """
+    Calculates the availability for a specific date based on normal schedules, overrides, and existing appointments.
+    Assumes slots of 60 minutes for simplicity.
+    """
+    # Check overrides
+    override = db.query(models.ScheduleOverride).filter(models.ScheduleOverride.override_date == target_date).first()
+    
+    start_time_str = None
+    end_time_str = None
+    
+    if override:
+        if override.is_day_off:
+            return []
+        start_time_str = override.start_time
+        end_time_str = override.end_time
+    else:
+        # Check regular schedule (0 = Monday, 6 = Sunday)
+        day_of_week = target_date.weekday()
+        schedules = db.query(models.SpecialistSchedule).filter(
+            models.SpecialistSchedule.day_of_week == day_of_week,
+            models.SpecialistSchedule.is_active == True
+        ).all()
+        
+        if not schedules:
+            return []
+            
+        # For simplicity, if multiple schedules exist for a day, we just take the first or union them.
+        # Here we just take the first one or we can iterate. 
+        # Assume one general block per day for Medizen currently.
+        sched = schedules[0]
+        start_time_str = sched.start_time
+        end_time_str = sched.end_time
+        
+    if not start_time_str or not end_time_str:
+        return []
+
+    # Parse times
+    start_time_obj = datetime.strptime(start_time_str, "%H:%M").time()
+    end_time_obj = datetime.strptime(end_time_str, "%H:%M").time()
+    
+    # Generate 60-min slots
+    from datetime import datetime as dt, timedelta
+    
+    slots = []
+    current = dt.combine(target_date, start_time_obj)
+    end = dt.combine(target_date, end_time_obj)
+    
+    # Fetch existing appointments for the day
+    from datetime import time
+    start_of_day = dt.combine(target_date, time.min)
+    end_of_day = dt.combine(target_date, time.max)
+    
+    appointments = db.query(models.Appointment).filter(
+        models.Appointment.appointment_date >= start_of_day,
+        models.Appointment.appointment_date <= end_of_day,
+        models.Appointment.status != "Cancelled"
+    ).all()
+    
+    booked_times = [app.appointment_date for app in appointments]
+    now = dt.now()
+
+    while current + timedelta(hours=1) <= end:
+        slot_start_time = current
+        slot_end_time = current + timedelta(hours=1)
+        
+        # Check if booked
+        # Simple match if there's an appointment EXACTLY at this start time
+        # Better: if any appointment falls in [slot_start, slot_end)
+        is_booked = any(
+            slot_start_time <= b_time < slot_end_time for b_time in booked_times
+        )
+        
+        # Check if in past
+        is_past = slot_start_time <= now
+        
+        slots.append({
+            "start_time": slot_start_time.strftime("%H:%M"),
+            "end_time": slot_end_time.strftime("%H:%M"),
+            "is_available": not is_booked and not is_past
+        })
+        
+        current += timedelta(hours=1)
+        
+    return slots

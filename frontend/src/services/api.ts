@@ -25,6 +25,7 @@ export interface Patient {
     last_name: string;
     email: string;
     phone?: string;
+    address?: string;
     date_of_birth?: string;
     created_at: string;
     is_active: boolean;
@@ -187,6 +188,17 @@ export const appointmentsApi = {
 export const authApi = {
     updateProfile: async (data: any) => {
         const response = await api.put('/auth/me', data);
+        return response.data;
+    }
+};
+
+export const settingsApi = {
+    getSystemSettings: async () => {
+        const response = await api.get('/settings/');
+        return response.data;
+    },
+    updateSystemSettings: async (data: any) => {
+        const response = await api.put('/settings/', data);
         return response.data;
     }
 };

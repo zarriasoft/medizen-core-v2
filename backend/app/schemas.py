@@ -36,11 +36,13 @@ class TokenData(BaseModel):
     role: Optional[str] = None
 
 # --- PATIENT SCHEMAS ---
+
 class PatientBase(BaseModel):
     first_name: str
     last_name: str
     email: EmailStr
     phone: Optional[str] = None
+    address: Optional[str] = None
     date_of_birth: Optional[date] = None
 
 class PatientCreate(PatientBase):
@@ -50,6 +52,7 @@ class PatientUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     phone: Optional[str] = None
+    address: Optional[str] = None
     date_of_birth: Optional[date] = None
     is_active: Optional[bool] = None
 
@@ -173,6 +176,7 @@ class MembershipWithPatient(Membership):
 # --- APPOINTMENT SCHEMAS ---
 class AppointmentBase(BaseModel):
     appointment_date: datetime
+    membership_id: Optional[int] = None
     notes: Optional[str] = None
     status: Optional[str] = "Scheduled"
 
@@ -210,5 +214,59 @@ class ClinicalHistory(ClinicalHistoryBase):
 
     class Config:
         orm_mode = True
+
+# --- SYSTEM SETTINGS SCHEMAS ---
+class SystemSettingsBase(BaseModel):
+    smtp_host: Optional[str] = "smtp.gmail.com"
+    smtp_port: Optional[int] = 587
+    smtp_user: Optional[str] = ""
+    smtp_password: Optional[str] = ""
+    admin_email: Optional[str] = ""
+
+class SystemSettingsUpdate(SystemSettingsBase):
+    pass
+
+class SystemSettings(SystemSettingsBase):
+    id: int
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True
+
+# --- SPECIALIST AVAILABILITY SCHEMAS ---
+class SpecialistScheduleBase(BaseModel):
+    day_of_week: int
+    start_time: str
+    end_time: str
+    is_active: Optional[bool] = True
+
+class SpecialistScheduleCreate(SpecialistScheduleBase):
+    pass
+
+class SpecialistSchedule(SpecialistScheduleBase):
+    id: int
+
+    class Config:
+        orm_mode = True
+
+class ScheduleOverrideBase(BaseModel):
+    override_date: date
+    is_day_off: Optional[bool] = True
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+
+class ScheduleOverrideCreate(ScheduleOverrideBase):
+    pass
+
+class ScheduleOverride(ScheduleOverrideBase):
+    id: int
+
+    class Config:
+        orm_mode = True
+
+class TimeSlot(BaseModel):
+    start_time: str
+    end_time: str
+    is_available: bool
 
 Patient.model_rebuild() if hasattr(Patient, 'model_rebuild') else Patient.update_forward_refs()

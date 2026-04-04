@@ -27,6 +27,7 @@ class CaptureFormData(BaseModel):
     last_name: str
     email: EmailStr
     phone: Optional[str] = None
+    address: Optional[str] = None
     # Puntuaciones IEIM del test (1-10)
     pain_level: float
     sleep_quality: float
@@ -97,6 +98,7 @@ def submit_capture_form(form: CaptureFormData, db: Session = Depends(get_db)):
             last_name=form.last_name,
             email=form.email,
             phone=form.phone,
+            address=form.address,
             created_at=datetime.utcnow(),
             is_active=True,
         )
@@ -131,7 +133,9 @@ class EnrollRequest(BaseModel):
     first_name: str
     last_name: str
     email: EmailStr
+    password: str
     phone: Optional[str] = None
+    address: Optional[str] = None
     date_of_birth: Optional[str] = None
     plan_name: str
 
@@ -141,6 +145,8 @@ class EnrollResponse(BaseModel):
 @router.post("/enroll", response_model=EnrollResponse)
 def enroll_patient(form: EnrollRequest, db: Session = Depends(get_db)):
     from ..models import Membership
+    from ..email import send_admin_notification, format_new_enrollment_email
+    import logging
     
     parsed_dob = None
     if form.date_of_birth:
@@ -153,11 +159,14 @@ def enroll_patient(form: EnrollRequest, db: Session = Depends(get_db)):
     # Check if patient exists
     patient = db.query(Patient).filter(Patient.email == form.email).first()
     if not patient:
+        from ..auth import get_password_hash
         patient = Patient(
             first_name=form.first_name,
             last_name=form.last_name,
             email=form.email,
+            hashed_password=get_password_hash(form.password),
             phone=form.phone,
+            address=form.address,
             date_of_birth=parsed_dob,
             created_at=datetime.utcnow(),
             is_active=True,
@@ -166,8 +175,14 @@ def enroll_patient(form: EnrollRequest, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(patient)
     else:
+        # Update details if provided
+        from ..auth import get_password_hash
+        if not patient.hashed_password:
+            patient.hashed_password = get_password_hash(form.password)
         if form.phone and not patient.phone:
             patient.phone = form.phone
+        if form.address and not patient.address:
+            patient.address = form.address
         if parsed_dob and not patient.date_of_birth:
             patient.date_of_birth = parsed_dob
         db.commit()
@@ -188,6 +203,31 @@ def enroll_patient(form: EnrollRequest, db: Session = Depends(get_db)):
     )
     db.add(membership)
     db.commit()
+
+    # --- EMAIL NOTIFICATION INTEGRATION ---
+    try:
+        from ..email import send_patient_notification, format_welcome_email
+        patient_data = {
+            "first_name": form.first_name,
+            "last_name": form.last_name,
+            "email": form.email,
+            "phone": form.phone or "No indicado"
+        }
+        
+        # 1. Notify Admin
+        email_html = format_new_enrollment_email(patient_data, form.plan_name)
+        subject = f"🔔 Nueva Solicitud de Inscripción: {form.first_name} {form.last_name} ({form.plan_name})"
+        send_admin_notification(db=db, subject=subject, html_body=email_html)
+        
+        # 2. Notify Patient
+        patient_html = format_welcome_email(form.first_name, form.plan_name)
+        patient_subject = "¡Bienvenido a MediZen! Confirmación de inscripción"
+        send_patient_notification(db=db, to_email=form.email, subject=patient_subject, html_body=patient_html)
+        
+    except Exception as e:
+        logging.error(f"Failed to send email notification for new enrollment: {e}")
+        # Proceed anyway as the patient data was saved successfully
+    # --------------------------------------
 
     return EnrollResponse(
         message=f"Inscripción recibida. Nos pondremos en contacto a la brevedad."

@@ -39,6 +39,21 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
+@router.post("/login/patient", response_model=schemas.Token)
+def login_for_patient_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    patient = crud.get_patient_by_email(db, email=form_data.username)
+    if not patient or not patient.hashed_password or not auth.verify_password(form_data.password, patient.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = auth.create_access_token(
+        data={"sub": patient.email, "role": "patient", "patient_id": patient.id}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
 @router.get("/me", response_model=schemas.User)
 def read_users_me(current_user: models.User = Depends(auth.get_current_user)):
     return current_user
