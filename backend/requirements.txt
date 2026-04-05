@@ -12,3 +12,4 @@ alembic>=1.13.0
 email-validator
 apscheduler>=3.10.0
 python-dotenv>=1.0.0
+openai>=1.0.0
