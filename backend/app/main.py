@@ -39,7 +39,8 @@ app.add_middleware(
         "http://127.0.0.1:5175",
         "https://medizen-frontend.vercel.app",
         "https://patient-frontend-iota.vercel.app",
-        "https://patient-frontend-nbieonvsf-zarriasofts-projects.vercel.app"
+        "https://patient-frontend-nbieonvsf-zarriasofts-projects.vercel.app",
+        "https://frontend-zarriasofts-projects.vercel.app"
     ],
     allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
