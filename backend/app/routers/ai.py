@@ -11,7 +11,7 @@ router = APIRouter(
 # Usamos un valor ficticio en api_key porque la libreria lo exige, pero Ollama lo ignora.
 client = OpenAI(
     base_url='http://localhost:11434/v1',
-    api_key='ollama', 
+    api_key='ollama',  # pragma: allowlist secret
 )
 
 class ChatRequest(BaseModel):

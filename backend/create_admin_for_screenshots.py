@@ -6,10 +6,10 @@ from app.auth import get_password_hash
 db = SessionLocal()
 try:
     user_in = UserCreate(
-        username="admin", 
-        email="admin@medizen.com", 
-        password="medicadmin", 
-        full_name="Admin", 
+        username="admin",
+        email="admin@medizen.com",
+        password="medicadmin",
+        full_name="Admin",
         role="admin"
     )
     hashed = get_password_hash("medicadmin")

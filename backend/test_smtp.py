@@ -23,7 +23,7 @@ def test_smtp():
         print(f"User: {smtp_user}")
         password_masked = "****" if smtp_password else "None"
         print(f"Pass: {password_masked} (length: {len(smtp_password) if smtp_password else 0})")
-        
+
         if not all([smtp_host, smtp_port, smtp_user, smtp_password]):
             print("Missing some SMTP credentials. Cannot test.")
             return
@@ -35,7 +35,7 @@ def test_smtp():
         server.login(smtp_user, smtp_password)
         print("SMTP Login Successful!")
         server.quit()
-        
+
     except Exception as e:
         print(f"SMTP Test Failed: {e}")
 

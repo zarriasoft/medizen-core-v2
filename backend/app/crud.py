@@ -10,6 +10,10 @@ def get_user_by_username(db: Session, username: str):
 def get_user_by_email(db: Session, email: str):
     return db.query(models.User).filter(func.lower(models.User.email) == email.lower()).first()
 
+def get_users_count(db: Session):
+    return db.query(models.User).count()
+
+
 def create_user(db: Session, user: schemas.UserCreate, hashed_password: str):
     db_user = models.User(
         username=user.username,
@@ -28,17 +32,17 @@ def update_user(db: Session, user_id: int, user_update: schemas.UserUpdate, hash
     db_user = db.query(models.User).filter(models.User.id == user_id).first()
     if not db_user:
         return None
-    
+
     update_data = user_update.dict(exclude_unset=True)
     if "password" in update_data:
         del update_data["password"]
-    
+
     for key, value in update_data.items():
         setattr(db_user, key, value)
-        
+
     if hashed_password:
         db_user.hashed_password = hashed_password
-        
+
     db.commit()
     db.refresh(db_user)
     return db_user
@@ -85,14 +89,14 @@ def calculate_overall_score(record: schemas.IEIMRecordCreate) -> float:
     # Supongamos escala 1 a 10
     positive = record.energy_level + record.sleep_quality + record.mobility
     negative = record.pain_level + record.stress_anxiety + record.inflammation
-    
+
     # max possible is 30 positive, 0 negative -> score 10
     score = ((positive - negative) + 30) / 6.0
     return round(max(1.0, min(10.0, score)), 2)
 
 def create_ieim_record(db: Session, ieim_record: schemas.IEIMRecordCreate):
     overall_score = calculate_overall_score(ieim_record)
-    
+
     db_ieim = models.IEIMRecord(**ieim_record.dict(), overall_score=overall_score)
     db.add(db_ieim)
     db.commit()
@@ -123,14 +127,14 @@ def get_patient_memberships(db: Session, patient_id: int):
 
 def get_all_memberships(db: Session, skip: int = 0, limit: int = 10000):
     memberships = db.query(
-        models.Membership, 
-        models.Patient.first_name.label('patient_name'), 
+        models.Membership,
+        models.Patient.first_name.label('patient_name'),
         models.Patient.last_name.label('patient_last_name')
     )\
     .join(models.Patient, models.Membership.patient_id == models.Patient.id)\
     .order_by(models.Membership.start_date.desc())\
     .offset(skip).limit(limit).all()
-    
+
     # Map to schema
     result = []
     for mem, p_name, p_lname in memberships:
@@ -139,7 +143,7 @@ def get_all_memberships(db: Session, skip: int = 0, limit: int = 10000):
         mem_schema.patient_name = p_name
         mem_schema.patient_last_name = p_lname
         result.append(mem_schema)
-        
+
     return result
 
 def update_membership(db: Session, membership_id: int, membership_update: schemas.MembershipUpdate):
@@ -191,25 +195,49 @@ def delete_membership_plan(db: Session, plan_id: int):
     db_plan = get_membership_plan(db, plan_id)
     if not db_plan:
         return None
-        
+
     # Check if there are active memberships using this plan name
     # We match by plan.name since Membership currently uses membership_type
     active_memberships = db.query(models.Membership)\
         .filter(models.Membership.membership_type == db_plan.name)\
         .filter(models.Membership.is_active == True)\
         .first()
-        
+
     if active_memberships:
         return {"error": f"Cannot delete plan '{db_plan.name}' because there are active memberships using it."}
-        
+
     db_plan.is_active = False
     db.commit()
     return db_plan
 
+def acquire_booking_lock(db: Session):
+    lock = db.query(models.BookingLock).filter(models.BookingLock.id == 1).with_for_update().first()
+    if lock:
+        lock.last_locked_at = datetime.utcnow()
+        db.commit()
+    return lock
+
 # --- APPOINTMENTS ---
+def check_appointment_overlap(db: Session, appointment_date: datetime, exclude_id: int = None):
+    from datetime import timedelta
+    # Un appointment dura 60 mins. Una nueva cita [app_date, app_date + 59m]
+    # se solapa si existe otra cita en el rango (app_date - 59m, app_date + 59m).
+    start_range = appointment_date - timedelta(minutes=59)
+    end_range = appointment_date + timedelta(minutes=59)
+
+    query = db.query(models.Appointment).filter(
+        models.Appointment.appointment_date > start_range,
+        models.Appointment.appointment_date < end_range,
+        models.Appointment.status.in_(["Scheduled", "Confirmed"])
+    )
+    if exclude_id:
+        query = query.filter(models.Appointment.id != exclude_id)
+
+    return query.first()
+
 def create_appointment(db: Session, appointment: schemas.AppointmentCreate):
     db_appointment = models.Appointment(**appointment.dict())
-    
+
     # Just link the membership if active, DO NOT deduct yet (deduct on completion)
     # Only assign automatically if the frontend didn't already send one
     if not db_appointment.membership_id:
@@ -218,10 +246,10 @@ def create_appointment(db: Session, appointment: schemas.AppointmentCreate):
                               .filter(models.Membership.is_active == True)\
                               .filter(models.Membership.used_sessions < models.Membership.total_sessions)\
                               .first()
-                              
+
         if active_membership:
             db_appointment.membership_id = active_membership.id
-            
+
     db.add(db_appointment)
     db.commit()
     db.refresh(db_appointment)
@@ -245,12 +273,12 @@ def update_appointment(db: Session, appointment_id: int, appointment_update: sch
     db_appointment = get_appointment(db, appointment_id)
     if not db_appointment:
         return None
-        
+
     old_status = db_appointment.status
-    
+
     for key, value in appointment_update.dict(exclude_unset=True).items():
         setattr(db_appointment, key, value)
-        
+
     # If the status is moved FROM "Completed" to something else, we must REFUND the session
     if old_status == "Completed" and db_appointment.status != "Completed" and db_appointment.membership_id:
         membership = get_membership(db, db_appointment.membership_id)
@@ -258,12 +286,12 @@ def update_appointment(db: Session, appointment_id: int, appointment_update: sch
             membership.used_sessions -= 1
             if membership.used_sessions < membership.total_sessions:
                 membership.is_active = True
-                
+
     # If the status is moved TO "Completed" from something else, we must DEDUCT the session
     elif old_status != "Completed" and db_appointment.status == "Completed":
         # First try to re-use the linked membership if it has space
         linked_membership = get_membership(db, db_appointment.membership_id) if db_appointment.membership_id else None
-        
+
         if linked_membership and linked_membership.used_sessions < linked_membership.total_sessions:
             linked_membership.used_sessions += 1
             if linked_membership.used_sessions >= linked_membership.total_sessions:
@@ -282,7 +310,7 @@ def update_appointment(db: Session, appointment_id: int, appointment_update: sch
                     active_membership.is_active = False
             else:
                 db_appointment.membership_id = None # Clear it if we couldn't get a session
-                
+
     db.commit()
     db.refresh(db_appointment)
     return db_appointment
@@ -291,7 +319,7 @@ def delete_appointment(db: Session, appointment_id: int):
     db_appointment = get_appointment(db, appointment_id)
     if not db_appointment:
         return None
-        
+
     # Only refund if it was Completed!
     if db_appointment.status == "Completed" and db_appointment.membership_id:
         membership = get_membership(db, db_appointment.membership_id)
@@ -299,7 +327,7 @@ def delete_appointment(db: Session, appointment_id: int):
             membership.used_sessions -= 1
             if membership.used_sessions < membership.total_sessions:
                 membership.is_active = True
-                
+
     db.delete(db_appointment)
     db.commit()
     return db_appointment
@@ -307,17 +335,17 @@ def complete_appointment(db: Session, appointment_id: int, notes: str):
     db_appointment = get_appointment(db, appointment_id)
     if not db_appointment:
         return None
-        
+
     old_status = db_appointment.status
     db_appointment.status = "Completed"
-    
+
     if notes:
         db_appointment.notes = notes
-        
+
     # Deduct membership session here IF it wasn't already completed
     if old_status != "Completed":
         linked_membership = get_membership(db, db_appointment.membership_id) if db_appointment.membership_id else None
-        
+
         if linked_membership and linked_membership.used_sessions < linked_membership.total_sessions:
             linked_membership.used_sessions += 1
             if linked_membership.used_sessions >= linked_membership.total_sessions:
@@ -386,10 +414,10 @@ def get_availability(db: Session, target_date: datetime.date):
     """
     # Check overrides
     override = db.query(models.ScheduleOverride).filter(models.ScheduleOverride.override_date == target_date).first()
-    
+
     start_time_str = None
     end_time_str = None
-    
+
     if override:
         if override.is_day_off:
             return []
@@ -402,65 +430,65 @@ def get_availability(db: Session, target_date: datetime.date):
             models.SpecialistSchedule.day_of_week == day_of_week,
             models.SpecialistSchedule.is_active == True
         ).all()
-        
+
         if not schedules:
             return []
-            
+
         # For simplicity, if multiple schedules exist for a day, we just take the first or union them.
-        # Here we just take the first one or we can iterate. 
+        # Here we just take the first one or we can iterate.
         # Assume one general block per day for Medizen currently.
         sched = schedules[0]
         start_time_str = sched.start_time
         end_time_str = sched.end_time
-        
+
     if not start_time_str or not end_time_str:
         return []
 
     # Parse times
     start_time_obj = datetime.strptime(start_time_str, "%H:%M").time()
     end_time_obj = datetime.strptime(end_time_str, "%H:%M").time()
-    
+
     # Generate 60-min slots
     from datetime import datetime as dt, timedelta
-    
+
     slots = []
     current = dt.combine(target_date, start_time_obj)
     end = dt.combine(target_date, end_time_obj)
-    
+
     # Fetch existing appointments for the day
     from datetime import time
     start_of_day = dt.combine(target_date, time.min)
     end_of_day = dt.combine(target_date, time.max)
-    
+
     appointments = db.query(models.Appointment).filter(
         models.Appointment.appointment_date >= start_of_day,
         models.Appointment.appointment_date <= end_of_day,
         models.Appointment.status != "Cancelled"
     ).all()
-    
+
     booked_times = [app.appointment_date for app in appointments]
     now = dt.now()
 
     while current + timedelta(hours=1) <= end:
         slot_start_time = current
         slot_end_time = current + timedelta(hours=1)
-        
+
         # Check if booked
         # Simple match if there's an appointment EXACTLY at this start time
         # Better: if any appointment falls in [slot_start, slot_end)
         is_booked = any(
             slot_start_time <= b_time < slot_end_time for b_time in booked_times
         )
-        
+
         # Check if in past
         is_past = slot_start_time <= now
-        
+
         slots.append({
             "start_time": slot_start_time.strftime("%H:%M"),
             "end_time": slot_end_time.strftime("%H:%M"),
             "is_available": not is_booked and not is_past
         })
-        
+
         current += timedelta(hours=1)
-        
+
     return slots

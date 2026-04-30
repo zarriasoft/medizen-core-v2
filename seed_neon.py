@@ -6,11 +6,15 @@ import subprocess, sys
 # Instalar dependencias necesarias
 subprocess.run([sys.executable, "-m", "pip", "install", "psycopg2-binary", "bcrypt", "--quiet"], capture_output=True)
 
+import os
 import psycopg2
 import bcrypt
 
-# Conexion a Neon
-NEON_URL = "postgresql://neondb_owner:npg_SEzOF5pDaAQ9@ep-rough-thunder-adzl30fb.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require"
+NEON_URL = os.environ.get("DATABASE_URL")
+if not NEON_URL:
+    print("ERROR: Debes configurar la variable de entorno DATABASE_URL")
+    print("  Ejemplo: set DATABASE_URL=postgresql://usuario:password@host/dbname?sslmode=require")
+    sys.exit(1)
 
 def hash_password(password: str) -> str:
     hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())

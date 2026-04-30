@@ -10,7 +10,7 @@ if juan:
     print("Appointments:")
     for a in appts:
         print(f"  - ID: {a.id}, Status: {a.status}, Date: {a.appointment_date}, Membership ID: {a.membership_id}")
-    
+
     mems = db.query(Membership).filter(Membership.patient_id == juan.id).all()
     print("Memberships:")
     for m in mems:

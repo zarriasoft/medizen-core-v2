@@ -2,24 +2,17 @@
 Router publico (sin autenticacion) para el formulario de captacion externa.
 Recibe los datos del test IEIM de un potencial paciente y los almacena.
 """
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 from datetime import datetime
 
-from ..database import SessionLocal
+from ..database import SessionLocal, get_db
 from ..models import Patient, IEIMRecord
+from ..limiter import limiter
 
 router = APIRouter(prefix="/public", tags=["public"])
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 class CaptureFormData(BaseModel):
@@ -82,7 +75,8 @@ def _classify_ieim(score: float) -> tuple[str, str]:
 
 
 @router.post("/capture", response_model=CaptureFormResponse)
-def submit_capture_form(form: CaptureFormData, db: Session = Depends(get_db)):
+@limiter.limit("3/minute")
+def submit_capture_form(request: Request, form: CaptureFormData, db: Session = Depends(get_db)):
     """
     Endpoint publico que recibe el test IEIM de captacion.
     Crea al paciente si no existe, guarda el registro IEIM y devuelve su resultado.
@@ -147,7 +141,7 @@ def enroll_patient(form: EnrollRequest, db: Session = Depends(get_db)):
     from ..models import Membership
     from ..email import send_admin_notification, format_new_enrollment_email
     import logging
-    
+
     parsed_dob = None
     if form.date_of_birth:
         try:
@@ -203,6 +197,23 @@ def enroll_patient(form: EnrollRequest, db: Session = Depends(get_db)):
     )
     db.add(membership)
     db.commit()
+    db.refresh(membership)
+
+    from ..models import Payment
+    amount_str = plan.price.replace("$", "").replace(".", "").replace(",", "") if plan and plan.price else "0"
+    try:
+        amount = float(amount_str)
+    except ValueError:
+        amount = 0.0
+
+    payment = Payment(
+        patient_id=patient.id,
+        membership_id=membership.id,
+        amount=amount,
+        status="pending"
+    )
+    db.add(payment)
+    db.commit()
 
     # --- EMAIL NOTIFICATION INTEGRATION ---
     try:
@@ -213,23 +224,22 @@ def enroll_patient(form: EnrollRequest, db: Session = Depends(get_db)):
             "email": form.email,
             "phone": form.phone or "No indicado"
         }
-        
+
         # 1. Notify Admin
         email_html = format_new_enrollment_email(patient_data, form.plan_name)
         subject = f"🔔 Nueva Solicitud de Inscripción: {form.first_name} {form.last_name} ({form.plan_name})"
         send_admin_notification(db=db, subject=subject, html_body=email_html)
-        
+
         # 2. Notify Patient
         patient_html = format_welcome_email(form.first_name, form.plan_name)
         patient_subject = "¡Bienvenido a MediZen! Confirmación de inscripción"
         send_patient_notification(db=db, to_email=form.email, subject=patient_subject, html_body=patient_html)
-        
+
     except Exception as e:
-        logging.error(f"Failed to send email notification for new enrollment: {e}")
+        logging.error(f"Error al enviar la notificación por correo: {repr(e)}")
         # Proceed anyway as the patient data was saved successfully
     # --------------------------------------
 
     return EnrollResponse(
         message=f"Inscripción recibida. Nos pondremos en contacto a la brevedad."
     )
-

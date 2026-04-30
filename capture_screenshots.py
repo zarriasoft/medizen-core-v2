@@ -5,12 +5,12 @@ async def run():
     async with async_playwright() as p:
         browser = await p.chromium.launch()
         page = await browser.new_page()
-        
+
         # 1. Login
         print("Capturing Login...")
         await page.goto("http://localhost:3000/login")
         await page.screenshot(path="screenshot_core_login.png")
-        
+
         # Login
         try:
             await page.fill("input[name='username']", "admin")
@@ -23,18 +23,18 @@ async def run():
                 f.write(content)
             print("Failed to login. Saved error.html")
             raise e
-        
+
         # 2. Core Dashboard
         print("Capturing Dashboard...")
         await page.goto("http://localhost:3000/")
         await page.screenshot(path="screenshot_core_dashboard.png")
-        
+
         # 3. Core Patients
         print("Capturing Patients List...")
         await page.goto("http://localhost:3000/patients")
         await page.wait_for_timeout(2000)
         await page.screenshot(path="screenshot_core_patients.png")
-        
+
         # Open patient registration modal
         print("Capturing Patient Registration Modal...")
         try:
@@ -57,7 +57,7 @@ async def run():
             await links[0].click()
             await page.wait_for_timeout(2000)
             await page.screenshot(path="screenshot_core_patient_detail.png")
-        
+
         # 4. Core Memberships
         print("Capturing Memberships List...")
         await page.goto("http://localhost:3000/memberships")
@@ -77,7 +77,7 @@ async def run():
         await page.goto("http://localhost:5173/")
         await page.wait_for_timeout(2000)
         await page.screenshot(path="screenshot_patient_portal.png")
-        
+
         await browser.close()
         print("Done capturing screenshots.")
 

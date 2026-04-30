@@ -10,7 +10,7 @@ export default function Memberships() {
     const [plans, setPlans] = useState<any[]>([]);
     const [memberships, setMemberships] = useState<any[]>([]);
     const [isVentaModalOpen, setIsVentaModalOpen] = useState(false);
-    
+
     // Tabs state
     const [activeTab, setActiveTab] = useState<'plans' | 'assigned'>('plans');
 
@@ -301,8 +301,8 @@ export default function Memberships() {
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-2">
                                                     <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden w-24">
-                                                        <div 
-                                                            className="h-full bg-teal-500 rounded-full transition-all duration-500" 
+                                                        <div
+                                                            className="h-full bg-teal-500 rounded-full transition-all duration-500"
                                                             style={{ width: `${Math.min((membership.used_sessions / membership.total_sessions) * 100, 100)}%` }}
                                                         />
                                                     </div>

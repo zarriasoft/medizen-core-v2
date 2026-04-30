@@ -19,7 +19,7 @@ def create_membership_for_patient(
     db_patient = crud.get_patient(db, patient_id=membership.patient_id)
     if not db_patient:
         raise HTTPException(status_code=404, detail="Patient not found")
-        
+
     return crud.create_membership(db=db, membership=membership)
 
 @router.get("/patient/{patient_id}", response_model=List[schemas.Membership])

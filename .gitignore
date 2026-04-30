@@ -4,11 +4,24 @@ __pycache__/
 *.pyo
 *.pyd
 .Python
+*.egg-info/
+*.egg
+dist/
+build/
 *.env
 .env
+.env.*
+.env.local
+.env.*.local
+!.env.example
 venv/
 .venv/
 env/
+.eggs/
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
 
 # SQLite (local only - cloud uses PostgreSQL)
 *.db
@@ -16,6 +29,7 @@ env/
 
 # Logs
 *.log
+logs/
 
 # Node
 node_modules/
@@ -25,11 +39,40 @@ dist/
 # OS
 .DS_Store
 Thumbs.db
+ehthumbs.db
+Desktop.ini
 
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
 
 # PDF temp files
 *.pdf
 .vercel
+
+# Backups
+backups/
+backups_*/
+*.zip
+*.tar.gz
+*.7z
+
+# Docker
+.env.docker
+
+# Coverage & test
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.pytest_cache/
+
+# Vercel
+.vercel
+
+# Secrets baseline (auto-generated)
+.secrets.baseline

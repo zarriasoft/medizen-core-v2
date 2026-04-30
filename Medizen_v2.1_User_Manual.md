@@ -51,7 +51,7 @@ Permite analizar todos los detalles de un usuario en específico.
 ![Detalle de Paciente](screenshot_core_patient_detail.png)
 
 **Nuevos Cambios:**
-* **Vista 360 del Paciente**: Integra la visualización de datos personales con el historial de membresías asociadas al paciente en tiempo real. 
+* **Vista 360 del Paciente**: Integra la visualización de datos personales con el historial de membresías asociadas al paciente en tiempo real.
 
 ### 1.6 Gestión de Planes de Membresía
 Administración de la oferta principal de la clínica.

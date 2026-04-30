@@ -8,47 +8,49 @@ def send_admin_notification(db, subject: str, html_body: str):
     Sends an email notification to the administrator making a real SMTP connection using DB settings.
     """
     from .models import SystemSettings
-    
+    import logging
+    logger = logging.getLogger(__name__)
+
     settings = db.query(SystemSettings).first()
-    
+
     # Defaults in case settings are entirely empty or missing
     smtp_host = settings.smtp_host if settings and settings.smtp_host else "smtp.gmail.com"
-    smtp_port = settings.smtp_port if settings and settings.smtp_port else 587
+    try:
+        smtp_port = int(settings.smtp_port) if settings and settings.smtp_port else 587
+    except (ValueError, TypeError):
+        smtp_port = 587
+
     smtp_user = settings.smtp_user if settings and settings.smtp_user else ""
     smtp_password = settings.smtp_password if settings and settings.smtp_password else ""
     admin_email = settings.admin_email if settings and settings.admin_email else ""
-    
+
     if not smtp_user or not smtp_password or not admin_email:
-        print("===" * 15)
-        print("MOCK EMAIL: Faltan credenciales SMTP o correo de administrador en la configuración del sistema.")
-        print(f"Para: {admin_email or 'No configurado'}")
-        print(f"Asunto: {subject}")
-        print("===" * 15)
-        return True
+        logger.warning(f"SKIPPING EMAIL: Missing SMTP credentials. User: {smtp_user}, AdminEmail: {admin_email}")
+        return False
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = smtp_user
     msg["To"] = admin_email
 
-    part1 = MIMEText(html_body, "html")
-    msg.attach(part1)
+    msg.attach(MIMEText(html_body, "html"))
 
     try:
+        logger.info(f"Attempting to send admin email via {smtp_host}:{smtp_port}...")
         if smtp_port == 465:
             from smtplib import SMTP_SSL
             with SMTP_SSL(smtp_host, smtp_port, timeout=15) as server:
                 server.login(smtp_user, smtp_password)
-                server.sendmail(smtp_user, admin_email, msg.as_string())
+                server.send_message(msg)
         else:
             with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as server:
                 server.starttls()
                 server.login(smtp_user, smtp_password)
-                server.sendmail(smtp_user, admin_email, msg.as_string())
-        print(f"✅ ¡Correo enviado exitosamente a {admin_email}!")
+                server.send_message(msg)
+        logger.info(f"[OK] Email sent successfully to {admin_email}!")
         return True
     except Exception as e:
-        print(f"❌ Error al enviar el correo real: {e}")
+        logger.error(f"[ERROR] Failed to send admin email: {str(e)}")
         return False
 
 
@@ -57,47 +59,50 @@ def send_patient_notification(db, to_email: str, subject: str, html_body: str):
     Sends an email notification to the patient making a real SMTP connection using DB settings.
     """
     from .models import SystemSettings
-    
+    import logging
+    logger = logging.getLogger(__name__)
+
     settings = db.query(SystemSettings).first()
-    
+
     # Defaults in case settings are entirely empty or missing
     smtp_host = settings.smtp_host if settings and settings.smtp_host else "smtp.gmail.com"
-    smtp_port = settings.smtp_port if settings and settings.smtp_port else 587
+    try:
+        smtp_port = int(settings.smtp_port) if settings and settings.smtp_port else 587
+    except (ValueError, TypeError):
+        smtp_port = 587
+
     smtp_user = settings.smtp_user if settings and settings.smtp_user else ""
     smtp_password = settings.smtp_password if settings and settings.smtp_password else ""
-    
+
     if not smtp_user or not smtp_password or not to_email:
-        print("===" * 15)
-        print("MOCK EMAIL: Faltan credenciales SMTP en la configuración del sistema.")
-        print(f"Para: {to_email}")
-        print(f"Asunto: {subject}")
-        print("===" * 15)
-        return True
+        logger.warning(f"SKIPPING PATIENT EMAIL: Missing SMTP credentials. To: {to_email}")
+        return False
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = smtp_user
     msg["To"] = to_email
 
-    part1 = MIMEText(html_body, "html")
-    msg.attach(part1)
+    msg.attach(MIMEText(html_body, "html"))
 
     try:
+        logger.info(f"Attempting to send patient email via {smtp_host}:{smtp_port}...")
         if smtp_port == 465:
             from smtplib import SMTP_SSL
             with SMTP_SSL(smtp_host, smtp_port, timeout=15) as server:
                 server.login(smtp_user, smtp_password)
-                server.sendmail(smtp_user, to_email, msg.as_string())
+                server.send_message(msg)
         else:
             with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as server:
                 server.starttls()
                 server.login(smtp_user, smtp_password)
-                server.sendmail(smtp_user, to_email, msg.as_string())
-        print(f"✅ ¡Correo enviado exitosamente a {to_email}!")
+                server.send_message(msg)
+        logger.info(f"[OK] Email sent successfully to {to_email}!")
         return True
     except Exception as e:
-        print(f"❌ Error al enviar el correo real a paciente: {e}")
+        logger.error(f"[ERROR] Failed to send patient email: {str(e)}")
         return False
+
 
 def format_welcome_email(patient_name: str, plan_name: str) -> str:
     """
@@ -108,11 +113,11 @@ def format_welcome_email(patient_name: str, plan_name: str) -> str:
       <body style="font-family: Arial, sans-serif; color: #333;">
         <h2 style="color: #0d9488;">¡Bienvenido a MediZen, {patient_name}!</h2>
         <p>Hemos recibido exitosamente tu solicitud de inscripción.</p>
-        
+
         <p style="margin-top: 20px;">
           Has elegido el plan de membresía: <strong style="color: #d97706;">{plan_name}</strong>.
         </p>
-        
+
         <p>
           Nuestro equipo se pondrá en contacto contigo a la brevedad para coordinar los detalles de pago y activación.
           <br><br>
@@ -138,7 +143,7 @@ def format_new_enrollment_email(patient_data: dict, plan_name: str) -> str:
       <body style="font-family: Arial, sans-serif; color: #333;">
         <h2 style="color: #0d9488;">¡Nueva Solicitud de Inscripción en MediZen!</h2>
         <p>Un nuevo paciente ha completado el formulario de membresía en el portal de pacientes.</p>
-        
+
         <table style="border-collapse: collapse; width: 100%; max-width: 600px; margin-top: 20px;">
             <tr>
                 <td style="padding: 10px; border: 1px solid #ddd; background-color: #f8fafc; font-weight: bold; width: 30%;">Nombre:</td>
@@ -157,12 +162,12 @@ def format_new_enrollment_email(patient_data: dict, plan_name: str) -> str:
                 <td style="padding: 10px; border: 1px solid #ddd; color: #d97706; font-weight: bold;">{plan_name}</td>
             </tr>
         </table>
-        
+
         <p style="margin-top: 20px;">
           Por favor, ponte en contacto con el paciente a la brevedad para coordinar la firma y el pago de la membresía.<br>
           Recuerda activar su membresía manualmente en el portal Core una vez recibido el pago.
         </p>
-        
+
         <p style="color: #64748b; font-size: 12px; margin-top: 40px;">
           Este es un correo automático generado por el Sistema Core de MediZen.
         </p>
@@ -182,13 +187,13 @@ def format_new_appointment_email(patient_data: dict, appointment_date: str, note
                 <td style="padding: 10px; border: 1px solid #ddd; color: #10b981; font-weight: bold;">{membership_name}</td>
             </tr>
         """
-        
+
     return f"""
     <html>
       <body style="font-family: Arial, sans-serif; color: #333;">
         <h2 style="color: #0d9488;">¡Nueva Cita Agendada en MediZen!</h2>
         <p>Un paciente ha agendado una nueva sesión desde el portal de autogestión.</p>
-        
+
         <table style="border-collapse: collapse; width: 100%; max-width: 600px; margin-top: 20px;">
             <tr>
                 <td style="padding: 10px; border: 1px solid #ddd; background-color: #f8fafc; font-weight: bold; width: 30%;">Paciente:</td>
@@ -204,7 +209,7 @@ def format_new_appointment_email(patient_data: dict, appointment_date: str, note
                 <td style="padding: 10px; border: 1px solid #ddd;">{notes or 'Sin notas adicionales'}</td>
             </tr>
         </table>
-        
+
         <p style="margin-top: 20px;">
           Por favor, revisa el portal Core para más detalles.
         </p>

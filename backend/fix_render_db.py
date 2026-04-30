@@ -15,38 +15,38 @@ def sync_schema():
     try:
         conn = psycopg2.connect(db_url)
         cur = conn.cursor()
-        
+
         # 1. Update memberships table
         print("Updating memberships table...")
-        
+
         try:
             cur.execute("ALTER TABLE memberships ADD COLUMN total_sessions INTEGER DEFAULT 1;")
             print("  - Added total_sessions column")
         except psycopg2.errors.DuplicateColumn:
             print("  - total_sessions column already exists")
             conn.rollback() # reset tx
-            
+
         try:
             cur.execute("ALTER TABLE memberships ADD COLUMN used_sessions INTEGER DEFAULT 0;")
             print("  - Added used_sessions column")
         except psycopg2.errors.DuplicateColumn:
             print("  - used_sessions column already exists")
             conn.rollback()
-            
+
         try:
             cur.execute("ALTER TABLE memberships ADD COLUMN is_active BOOLEAN DEFAULT TRUE;")
             print("  - Added is_active column")
         except psycopg2.errors.DuplicateColumn:
             print("  - is_active column already exists")
             conn.rollback()
-            
+
         try:
             cur.execute("ALTER TABLE memberships DROP COLUMN amount;")
             print("  - Dropped amount column")
         except psycopg2.errors.UndefinedColumn:
             print("  - amount column already dropped")
             conn.rollback()
-            
+
         # 2. Update appointments table
         print("Updating appointments table...")
         try:
@@ -56,11 +56,11 @@ def sync_schema():
         except psycopg2.errors.DuplicateColumn:
              print("  - membership_id column already exists")
              conn.rollback()
-             
+
         # Commit the changes
         conn.commit()
         print("Successfully updated database schema!")
-        
+
     except Exception as e:
         print(f"Error updating database: {e}")
     finally:

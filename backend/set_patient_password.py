@@ -13,13 +13,13 @@ def set_all_passwords():
         patients = db.query(Patient).all()
         default_password = "medizen123"
         hashed = auth.get_password_hash(default_password)
-        
+
         count = 0
         for p in patients:
             if not p.hashed_password:
                 p.hashed_password = hashed
                 count += 1
-            
+
         db.commit()
         print(f"PASS_SET_SUCCESS: Se asigno contrasena a {count} paciente(s) sin credenciales.")
     except Exception as e:

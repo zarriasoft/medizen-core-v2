@@ -94,13 +94,13 @@ export default function Settings() {
                 <div className="flex flex-col md:flex-row">
                     {/* Sidebar Settings */}
                     <div className="w-full md:w-64 bg-slate-50/50 border-r border-slate-100 p-6 flex flex-col gap-2">
-                        <button 
+                        <button
                             onClick={() => setActiveTab('perfil')}
                             className={`flex items-center gap-3 px-4 py-3 font-medium rounded-xl transition-all ${activeTab === 'perfil' ? 'bg-teal-50 text-teal-700' : 'text-slate-600 hover:bg-slate-100'}`}>
                             <User className={`w-5 h-5 ${activeTab === 'perfil' ? '' : 'text-slate-400'}`} />
                             Perfil
                         </button>
-                        <button 
+                        <button
                             onClick={() => setActiveTab('notificaciones')}
                             className={`flex items-center gap-3 px-4 py-3 font-medium rounded-xl transition-all ${activeTab === 'notificaciones' ? 'bg-teal-50 text-teal-700' : 'text-slate-600 hover:bg-slate-100'}`}>
                             <Bell className={`w-5 h-5 ${activeTab === 'notificaciones' ? '' : 'text-slate-400'}`} />
@@ -175,7 +175,7 @@ export default function Settings() {
                             <div>
                                 <h2 className="text-xl font-bold text-slate-800 mb-2">Configuración de Correos</h2>
                                 <p className="text-sm text-slate-500 mb-6">Administra desde dónde se envían los correos automáticos (SMTP) y quién los recibe.</p>
-                                
+
                                 <form onSubmit={handleSaveSettings} className="space-y-6">
                                     <div className="bg-blue-50/50 border border-blue-100 p-4 rounded-xl mb-6">
                                         <div className="flex items-start gap-3">

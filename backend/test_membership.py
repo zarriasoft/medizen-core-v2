@@ -12,13 +12,13 @@ client = TestClient(app)
 
 def test_membership_tracking():
     print("Starting tests...")
-    
+
     # Needs a token to access endpoints. We will create a fresh user and get connection token or override deps.
     # To keep it simple, we just override get_current_user
-    
+
     from app.auth import get_current_user
     app.dependency_overrides[get_current_user] = lambda: {"username": "admin", "role": "admin"}
-    
+
     # 2. Get first patient or create one
     import uuid
     unique_ext = str(uuid.uuid4())[:8]
@@ -55,10 +55,10 @@ def test_membership_tracking():
     }
     response = client.post("/appointments", json=appt_data)
     appt1 = response.json()
-    
+
     from app.database import SessionLocal
     from app.models import Membership
-    
+
     def get_membership_from_db(mem_id):
         db = SessionLocal()
         mem = db.query(Membership).filter(Membership.id == mem_id).first()
@@ -70,7 +70,7 @@ def test_membership_tracking():
     print(f"After Schedule Appt 1 -> Used Sessions: {mem_check.used_sessions}, Active: {mem_check.is_active}")
     assert mem_check.used_sessions == 0
     assert mem_check.is_active == True
-    
+
     # Complete appointment 1
     response = client.post(f"/appointments/{appt1['id']}/complete", params={"notes": "Done"})
     mem_check = get_membership_from_db(membership_id)
@@ -82,7 +82,7 @@ def test_membership_tracking():
     appt_data["notes"] = "Test Appt 2"
     response = client.post("/appointments", json=appt_data)
     appt2 = response.json()
-    
+
     # Complete appointment 2
     response = client.post(f"/appointments/{appt2['id']}/complete", params={"notes": "Done"})
 
@@ -95,7 +95,7 @@ def test_membership_tracking():
     # 6. Cancel appointment 1 (using update endpoint maybe? or just patch status)
     update_data = {"status": "Cancelled"}
     response = client.put(f"/appointments/{appt1['id']}", json=update_data)
-    
+
     # Verify membership refunded 1 and activated
     mem_check = get_membership_from_db(membership_id)
     print(f"After Cancel Appt 1 -> Used Sessions: {mem_check.used_sessions}, Active: {mem_check.is_active}")
@@ -104,7 +104,7 @@ def test_membership_tracking():
 
     # 7. Delete appointment 2
     response = client.delete(f"/appointments/{appt2['id']}")
-    
+
     # Verify membership refunded 1
     mem_check = get_membership_from_db(membership_id)
     print(f"After Delete Appt 2 -> Used Sessions: {mem_check.used_sessions}, Active: {mem_check.is_active}")

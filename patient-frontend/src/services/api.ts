@@ -23,7 +23,7 @@ export const authApi = {
         const formData = new URLSearchParams();
         formData.append('username', email); // OAuth2 expects 'username'
         formData.append('password', password);
-        
+
         const response = await api.post('/auth/login/patient', formData, {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         });
@@ -33,15 +33,17 @@ export const authApi = {
 
 export const patientApi = {
     getProfile: () => api.get('/me/'),
+    updateProfile: (data: Record<string, unknown>) => api.put('/me/', data),
     getMemberships: () => api.get('/me/memberships'),
     getAppointments: () => api.get('/me/appointments'),
     getAvailability: (date: string) => api.get(`/me/appointments/availability?target_date=${date}`),
-    bookAppointment: (data: {appointment_date: string, membership_id?: number, notes?: string}) => api.post('/me/appointments', data)
+    bookAppointment: (data: {appointment_date: string, membership_id?: number, notes?: string}) => api.post('/me/appointments', data),
+    cancelAppointment: (id: number) => api.put(`/me/appointments/${id}/cancel`)
 };
 
 export const publicApi = {
     getPlans: () => api.get('/membership-plans/'),
-    enroll: (data: any) => api.post('/public/enroll', data)
+    enroll: (data: Record<string, unknown>) => api.post('/public/enroll', data)
 };
 
 export default api;

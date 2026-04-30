@@ -5,14 +5,7 @@ import { dashboardApi } from '../services/api';
 import { exportToExcel } from '../utils/exportToExcel';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-const mockIeimData = [
-    { name: 'Sem 1', score: 6.2 },
-    { name: 'Sem 2', score: 6.8 },
-    { name: 'Sem 3', score: 6.5 },
-    { name: 'Sem 4', score: 7.2 },
-    { name: 'Sem 5', score: 7.8 },
-    { name: 'Sem 6', score: 8.5 },
-];
+
 
 function StatCard({ title, value, trend, icon }: any) {
     const isPositive = trend.includes('+');
@@ -40,6 +33,7 @@ export default function Dashboard() {
         abandonment_risk: 0
     });
     const [alerts, setAlerts] = useState<any[]>([]);
+    const [ieimHistory, setIeimHistory] = useState<any[]>([]);
 
     useEffect(() => {
         const fetchDashboardData = async () => {
@@ -48,6 +42,8 @@ export default function Dashboard() {
                 setMetrics(metricsData);
                 const alertsData = await dashboardApi.getAlerts();
                 setAlerts(alertsData);
+                const historyData = await dashboardApi.getIeimHistory();
+                setIeimHistory(historyData);
             } catch (error) {
                 console.error("Error fetching dashboard data:", error);
             }
@@ -102,7 +98,7 @@ export default function Dashboard() {
                     <h2 className="text-lg font-semibold text-slate-800 mb-4">Evolución IEIM Global</h2>
                     <div className="h-64 w-full">
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={mockIeimData}>
+                            <LineChart data={ieimHistory}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} dy={10} />
                                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} dx={-10} domain={[0, 10]} />

@@ -8,8 +8,17 @@ from sqlalchemy.orm import Session
 
 from . import crud, schemas, database, models
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 # Claves de configuración para JWT (en un entorno real usar variables de entorno)
-SECRET_KEY = "super-secret-medizen-key-change-in-production"
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    if os.getenv("DATABASE_URL"):
+        raise RuntimeError("CRITICAL ERROR: SECRET_KEY is missing but DATABASE_URL is present. Refusing to start in production without a secret key.")
+    SECRET_KEY = "medizen-dev-key-change-in-production"  # pragma: allowlist secret
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 1 week
 
@@ -50,6 +59,22 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     if user is None:
         raise credentials_exception
     return user
+
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="auth/login", auto_error=False)
+
+def get_current_user_optional(token: Optional[str] = Depends(oauth2_scheme_optional), db: Session = Depends(database.get_db)):
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            return None
+        user = crud.get_user_by_username(db, username=username)
+        return user
+    except JWTError:
+        return None
+
 
 def get_current_patient(token: str = Depends(oauth2_scheme), db: Session = Depends(database.get_db)):
     credentials_exception = HTTPException(

@@ -27,7 +27,7 @@ class Patient(Base):
     date_of_birth = Column(Date)
     created_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
-    
+
     # Relationships
     ieim_records = relationship("IEIMRecord", back_populates="patient")
     memberships = relationship("Membership", back_populates="patient")
@@ -39,7 +39,7 @@ class IEIMRecord(Base):
     id = Column(Integer, primary_key=True, index=True)
     patient_id = Column(Integer, ForeignKey("patients.id"))
     record_date = Column(DateTime, default=datetime.utcnow)
-    
+
     # Las 6 variables del IEIM v2.0
     pain_level = Column(Float)
     sleep_quality = Column(Float)
@@ -47,7 +47,7 @@ class IEIMRecord(Base):
     stress_anxiety = Column(Float)
     mobility = Column(Float)
     inflammation = Column(Float)
-    
+
     # Indice calculado general
     overall_score = Column(Float)
 
@@ -113,9 +113,14 @@ class ClinicalHistory(Base):
     appointment_id = Column(Integer, ForeignKey("appointments.id"), nullable=True)
     date_recorded = Column(DateTime, default=datetime.utcnow)
     notes = Column(String)
-    
+
     patient = relationship("Patient")
     appointment = relationship("Appointment")
+
+class BookingLock(Base):
+    __tablename__ = "booking_locks"
+    id = Column(Integer, primary_key=True, index=True)
+    last_locked_at = Column(DateTime, default=datetime.utcnow)
 
 class SystemSettings(Base):
     __tablename__ = "system_settings"
@@ -145,3 +150,19 @@ class ScheduleOverride(Base):
     is_day_off = Column(Boolean, default=True)
     start_time = Column(String, nullable=True)
     end_time = Column(String, nullable=True)
+
+class Payment(Base):
+    __tablename__ = "payments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    patient_id = Column(Integer, ForeignKey("patients.id"))
+    membership_id = Column(Integer, ForeignKey("memberships.id"), nullable=True)
+    amount = Column(Float)
+    currency = Column(String, default="CLP")
+    status = Column(String, default="pending") # pending, completed, failed, refunded
+    transaction_id = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+
+    patient = relationship("Patient")
+    membership = relationship("Membership")

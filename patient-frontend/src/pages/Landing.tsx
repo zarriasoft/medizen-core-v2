@@ -1,25 +1,22 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Star, MessageCircle, MapPin, Phone, Globe, Calendar, Tag, HeartHandshake } from 'lucide-react';
+import { Check, Star, MapPin, Phone, Globe, Calendar, Tag, HeartHandshake } from 'lucide-react';
 import axios from 'axios';
 
-// Analytics tracking implementation
-const trackVisit = async () => {
-    try {
-        await axios.post('http://localhost:8000/analytics/visit', {
-            source: 'patient_portal',
-            timestamp: new Date().toISOString()
-        });
-        console.log("Visit tracked successfully");
-    } catch (e) {
-        // Suppress errors if backend is not reachable for tracking purposes
-        console.warn("Analytics service unavailable");
-    }
-};
+interface Plan {
+    name: string;
+    price: string;
+    period: string;
+    description: string;
+    features: string[];
+    buttonColor: string;
+    headerColor: string;
+    popular: boolean;
+}
 
 
 function App() {
-    const [plans, setPlans] = React.useState<any[]>([]);
+    const [plans, setPlans] = React.useState<Plan[]>([]);
     const [isLoadingPlans, setIsLoadingPlans] = React.useState(true);
     const [isEnrollModalOpen, setIsEnrollModalOpen] = React.useState(false);
     const [selectedPlan, setSelectedPlan] = React.useState('');
@@ -34,30 +31,24 @@ function App() {
     const [enrollStatus, setEnrollStatus] = React.useState<'idle' | 'loading' | 'success' | 'error'>('idle');
 
     useEffect(() => {
-        trackVisit();
-        
         // Fetch plans from backend
         const fetchPlans = async () => {
             try {
                 // In production, this should use VITE_API_URL env variable
                 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-                
-                // Expose globally for quick console debugging
-                (window as any).__VITE_API_URL = apiUrl;
-
                 // Add a timeout of 10s to avoid hanging forever on sleeping backends
                 const response = await axios.get(`${apiUrl}/membership-plans/`, { timeout: 10000 });
-                
+
                 if (response.data && response.data.length > 0) {
                     // Map backend data to frontend structure
-                    const activePlans = response.data.filter((p: any) => p.is_active);
-                    
+                    const activePlans = response.data.filter((p: { is_active: boolean }) => p.is_active);
+
                     if (activePlans.length > 0) {
-                        const formattedPlans = activePlans.map((p: any) => {
+                        const formattedPlans = activePlans.map((p: { color: string; features: string; price: string | number; name: string; frequency: string; description: string; is_popular: boolean; }) => {
                             // Determine colors based on db color string
                             let buttonColor = "bg-slate-600 hover:bg-slate-700";
                             let headerColor = "bg-slate-50";
-                            
+
                             if (p.color === 'emerald' || p.color === 'teal') {
                                 buttonColor = "bg-emerald-600 hover:bg-emerald-700";
                                 headerColor = "bg-emerald-50";
@@ -71,21 +62,21 @@ function App() {
                                 buttonColor = "bg-indigo-600 hover:bg-indigo-700";
                                 headerColor = "bg-indigo-50";
                             }
-                            
+
                             // Parse comma or newline separated features to array
                             const rawFeatures = p.features ? p.features.split(/[\n,]+/) : [];
                             const featureArray = rawFeatures
                                 .map((f: string) => f.replace(/^-\s*/, '').trim())
                                 .filter(Boolean);
-                            
+
                             // Format price (allow for text like "$45,000")
                             const numericString = String(p.price).replace(/[^0-9]/g, '');
                             const numericPrice = Number(numericString);
                             // If it parsed to a valid number and isn't empty, format it. Otherwise keep the original text.
-                            const formattedPrice = (numericString && !isNaN(numericPrice)) 
-                                ? "$" + numericPrice.toLocaleString('es-CL') 
+                            const formattedPrice = (numericString && !isNaN(numericPrice))
+                                ? "$" + numericPrice.toLocaleString('es-CL')
                                 : p.price;
-                            
+
                             return {
                                 name: p.name,
                                 price: formattedPrice,
@@ -97,7 +88,7 @@ function App() {
                                 popular: p.is_popular
                             };
                         });
-                        
+
                         setPlans(formattedPlans);
                     } else {
                         setPlans([]); // Fallback to empty if no active plans found
@@ -111,7 +102,7 @@ function App() {
                 setIsLoadingPlans(false);
             }
         };
-        
+
         fetchPlans();
     }, []);
 
@@ -165,8 +156,8 @@ function App() {
             {/* Hero Section */}
             <section className="py-16 md:py-24 bg-brand-light text-center px-4 relative overflow-hidden shadow-inner">
                 <div className="absolute inset-0 opacity-10 bg-[url('https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center mix-blend-overlay"></div>
-                
-                <motion.div 
+
+                <motion.div
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ duration: 0.8 }}
@@ -195,9 +186,10 @@ function App() {
                         </div>
                         <p className="text-sm text-slate-500 font-medium">Avalados por pacientes reales</p>
                     </div>
-                    
+
                     <div className="hidden md:block w-px h-16 bg-slate-200"></div>
-                    
+
+                    {/*
                     <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto px-4 md:px-0">
                         <a href="https://google.com" target="_blank" rel="noreferrer" className="flex-1 md:flex-none flex items-center justify-center gap-3 bg-white px-6 py-3 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-200 transition-all group">
                             <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1024px-Google_%22G%22_logo.svg.png" alt="Google" className="w-6 h-6 group-hover:scale-110 transition-transform" />
@@ -216,6 +208,7 @@ function App() {
                             </div>
                         </a>
                     </div>
+                    */}
                 </div>
             </section>
 
@@ -227,17 +220,16 @@ function App() {
                          ¡Cupos Limitados!
                      </span>
                 </div>
-                
+
                 <div className={`grid gap-8 items-start lg:px-8 ${
-                    isLoadingPlans ? 'md:grid-cols-3' : 
-                    plans.length === 1 ? 'md:grid-cols-1 max-w-sm mx-auto' : 
-                    plans.length === 2 ? 'md:grid-cols-2 max-w-4xl mx-auto' : 
+                    isLoadingPlans ? 'md:grid-cols-3' :
+                    plans.length === 1 ? 'md:grid-cols-1 max-w-sm mx-auto' :
+                    plans.length === 2 ? 'md:grid-cols-2 max-w-4xl mx-auto' :
                     'md:grid-cols-3'
                 }`}>
                     {isLoadingPlans ? (
                         <div className="col-span-full text-center py-20">
                             <p className="text-slate-500">Cargando planes de membresía...</p>
-                            <p className="text-xs text-slate-400 mt-2">Conectando con: {import.meta.env.VITE_API_URL || 'http://localhost:8000'}</p>
                         </div>
                     ) : plans.length === 0 ? (
                         <div className="col-span-full text-center py-20">
@@ -245,13 +237,13 @@ function App() {
                         </div>
                     ) : (
                         plans.map((plan, index) => (
-                        <motion.div 
+                        <motion.div
                             initial={{ y: 50, opacity: 0 }}
                             whileInView={{ y: 0, opacity: 1 }}
                             viewport={{ once: true, margin: "-100px" }}
                             transition={{ delay: index * 0.15, duration: 0.5 }}
-                            key={plan.name} 
-                            className={`bg-white rounded-3xl overflow-hidden shadow-xl border-2 flex flex-col h-full 
+                            key={plan.name}
+                            className={`bg-white rounded-3xl overflow-hidden shadow-xl border-2 flex flex-col h-full
                                 ${plan.popular ? 'border-amber-400 ring-4 ring-amber-400/20 scale-100 md:scale-105 z-10' : 'border-slate-100'}`}
                         >
                             {plan.popular && (
@@ -266,7 +258,7 @@ function App() {
                                     <span className="text-slate-500 font-medium absolute -right-12 bottom-2">{plan.period}</span>
                                 </div>
                             </div>
-                            
+
                             <div className="p-8 flex flex-col flex-grow">
                                 <ul className="space-y-5 mb-8 flex-grow">
                                     {plan.features.map((feature: string, i: number) => (
@@ -278,12 +270,12 @@ function App() {
                                         </li>
                                     ))}
                                 </ul>
-                                
+
                                 <div className="text-center italic text-slate-500 mb-8 font-serif px-4">
                                     "{plan.description}"
                                 </div>
-                                
-                                <button 
+
+                                <button
                                     onClick={() => handleSubscribe(plan.name)}
                                     className={`w-full py-4 px-6 rounded-2xl text-white font-bold text-lg transition-all active:scale-95 shadow-lg ${plan.buttonColor}`}
                                 >
@@ -340,9 +332,10 @@ function App() {
                 </div>
             </footer>
 
-            {/* Floating Chat Widget */}
+            {/* Floating Chat Widget (Hidden for production until ready) */}
+            {/*
             <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, y: 10, scale: 0.9 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{ delay: 2 }}
@@ -350,24 +343,25 @@ function App() {
                 >
                     ¡Hola! ¿Tienes dudas sobre los planes? 👋
                 </motion.div>
-                <button 
+                <button
                     className="bg-emerald-500 hover:bg-emerald-600 text-white w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition-transform hover:scale-110"
                     onClick={() => alert('Abriendo chat integrado en vivo con el equipo de MediZen...')}
                 >
                     <MessageCircle className="w-7 h-7" />
                 </button>
             </div>
+            */}
 
             {/* Enrollment Modal */}
             {isEnrollModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden relative"
                     >
                         {/* Close button */}
-                        <button 
+                        <button
                             onClick={() => setIsEnrollModalOpen(false)}
                             className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors z-10"
                         >
@@ -386,7 +380,7 @@ function App() {
                                     <p className="text-slate-600 mb-6">
                                         Tus datos se han registrado correctamente. Muy pronto nuestro equipo se contactará contigo para coordinar el pago y activar tu plan <strong>{selectedPlan}</strong>.
                                     </p>
-                                    <button 
+                                    <button
                                         onClick={() => setIsEnrollModalOpen(false)}
                                         className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-xl transition-colors"
                                     >
@@ -438,8 +432,8 @@ function App() {
                                             </div>
                                         </div>
                                         <div className="pt-4">
-                                            <button 
-                                                type="submit" 
+                                            <button
+                                                type="submit"
                                                 disabled={enrollStatus === 'loading'}
                                                 className={`w-full py-3 px-4 rounded-xl text-white font-bold flex justify-center items-center transition-all ${enrollStatus === 'loading' ? 'bg-slate-400 cursor-not-allowed' : 'bg-brand-dark hover:bg-slate-800 active:scale-95 shadow-lg'}`}
                                             >

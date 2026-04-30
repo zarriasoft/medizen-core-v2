@@ -1,0 +1,18 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+        exclude: 'tsconfig.*\.json$'
+      - id: check-added-large-files
+      - id: detect-private-key
+      - id: mixed-line-ending
+
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ['--exclude-files', 'package-lock.json|.secrets.baseline|skills-lock.json|.env.example|docker-compose.yml|seed_neon.py|test_api.py|test_enroll.py|test_unlinked.py|test_unlinked_put.py|create_initial_user.py|create_admin_for_screenshots.py|set_patient_password.py|fix_render_db.py|fix_render_db2.py|reset_admin.py|debug_juan.py|test_smtp.py|test_smtp_ssl.py|output.txt|conftest.py|test_auth.py|test_e2e.py|test_analytics.py|test_ieim.py|test_memberships.py|test_dashboard.py|test_capture.py|test_appointments.py|bcb6072179c3_add_payment_model.py|e3a4b5c6d7e8_add_booking_lock.py|ci.yml|GUIA_SEGURIDAD_CLIENTE.md|backend/output.txt|frontend/temp.txt|backend/requirements.lock']

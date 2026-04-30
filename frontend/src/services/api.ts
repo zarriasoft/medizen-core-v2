@@ -127,6 +127,10 @@ export const dashboardApi = {
     getAlerts: async () => {
         const response = await api.get('/dashboard/alerts');
         return response.data;
+    },
+    getIeimHistory: async () => {
+        const response = await api.get('/dashboard/ieim-history');
+        return response.data;
     }
 };
 

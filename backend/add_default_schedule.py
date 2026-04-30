@@ -24,7 +24,7 @@ def seed_schedules():
                 is_active=True
             )
             db.add(sched)
-        
+
         db.commit()
         print("Successfully seeded Monday-Friday 09:00 to 18:00 schedules.")
     except Exception as e:

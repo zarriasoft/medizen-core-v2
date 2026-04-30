@@ -16,6 +16,14 @@ def create_appointment(appointment: schemas.AppointmentCreate, db: Session = Dep
     db_patient = crud.get_patient(db, patient_id=appointment.patient_id)
     if not db_patient:
         raise HTTPException(status_code=404, detail="Patient not found")
+
+    # Acquire lock to serialize appointment creation
+    crud.acquire_booking_lock(db)
+
+    overlap = crud.check_appointment_overlap(db, appointment.appointment_date)
+    if overlap:
+        raise HTTPException(status_code=400, detail="El horario seleccionado ya está reservado.")
+
     return crud.create_appointment(db=db, appointment=appointment)
 
 @router.get("/", response_model=List[schemas.Appointment])
@@ -28,6 +36,13 @@ def read_patient_appointments(patient_id: int, db: Session = Depends(get_db)):
 
 @router.put("/{appointment_id}", response_model=schemas.Appointment)
 def update_appointment(appointment_id: int, appointment: schemas.AppointmentUpdate, db: Session = Depends(get_db)):
+    if appointment.appointment_date:
+        # Acquire lock to serialize check
+        crud.acquire_booking_lock(db)
+        overlap = crud.check_appointment_overlap(db, appointment.appointment_date, exclude_id=appointment_id)
+        if overlap:
+            raise HTTPException(status_code=400, detail="El horario seleccionado ya está reservado o se solapa.")
+
     db_appointment = crud.update_appointment(db, appointment_id=appointment_id, appointment_update=appointment)
     if not db_appointment:
         raise HTTPException(status_code=404, detail="Appointment not found")

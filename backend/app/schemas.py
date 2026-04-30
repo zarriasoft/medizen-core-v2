@@ -20,6 +20,12 @@ class UserUpdate(BaseModel):
     role: Optional[str] = None
     is_active: Optional[bool] = None
 
+class UserUpdateMe(BaseModel):
+    password: Optional[str] = None
+    email: Optional[EmailStr] = None
+    full_name: Optional[str] = None
+
+
 class User(UserBase):
     id: int
 
@@ -55,6 +61,13 @@ class PatientUpdate(BaseModel):
     address: Optional[str] = None
     date_of_birth: Optional[date] = None
     is_active: Optional[bool] = None
+
+class PatientUpdateMe(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    date_of_birth: Optional[date] = None
 
 class Patient(PatientBase):
     id: int
@@ -232,6 +245,24 @@ class SystemSettings(SystemSettingsBase):
 
     class Config:
         orm_mode = True
+
+class SystemSettingsOut(BaseModel):
+    id: int
+    smtp_host: Optional[str] = None
+    smtp_port: Optional[int] = None
+    smtp_user: Optional[str] = None
+    admin_email: Optional[str] = None
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True
+
+class SystemSettingsPublic(BaseModel):
+    admin_email: Optional[str] = ""
+
+    class Config:
+        orm_mode = True
+
 
 # --- SPECIALIST AVAILABILITY SCHEMAS ---
 class SpecialistScheduleBase(BaseModel):

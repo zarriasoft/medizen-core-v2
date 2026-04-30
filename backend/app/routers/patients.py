@@ -35,12 +35,12 @@ def create_record_for_patient(
 ):
     if ieim_record.patient_id != patient_id:
         raise HTTPException(status_code=400, detail="Patient ID mismatch")
-    
+
     # Check if patient exists
     db_patient = crud.get_patient(db, patient_id=patient_id)
     if not db_patient:
         raise HTTPException(status_code=404, detail="Patient not found")
-        
+
     return crud.create_ieim_record(db=db, ieim_record=ieim_record)
 
 @router.get("/{patient_id}/ieim/", response_model=List[schemas.IEIMRecord])

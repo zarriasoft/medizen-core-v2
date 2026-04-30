@@ -23,7 +23,7 @@ except sqlite3.OperationalError as e:
 print("Migrating production Postgres db...")
 database_url = os.getenv("DATABASE_URL")
 if not database_url:
-    database_url = "postgresql://neondb_owner:npg_SEzOF5pDaAQ9@ep-rough-thunder-adzl30fb.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require"
+    database_url = None
 
 if database_url:
     try:

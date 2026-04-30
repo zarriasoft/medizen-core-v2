@@ -7,6 +7,7 @@ interface Patient {
     last_name: string;
     email: string;
     phone?: string;
+    address?: string;
 }
 
 interface AuthContextType {
@@ -15,6 +16,7 @@ interface AuthContextType {
     isLoading: boolean;
     login: (e: string, p: string) => Promise<void>;
     logout: () => void;
+    refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>(null!);
@@ -52,17 +54,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setPatient(null);
     };
 
+    const refreshProfile = async () => {
+        try {
+            const res = await patientApi.getProfile();
+            setPatient(res.data);
+        } catch (error) {
+            console.error("Failed to refresh profile", error);
+        }
+    };
+
     return (
         <AuthContext.Provider value={{
             patient,
             isAuthenticated: !!patient,
             isLoading,
             login,
-            logout
+            logout,
+            refreshProfile
         }}>
             {children}
         </AuthContext.Provider>
     );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);

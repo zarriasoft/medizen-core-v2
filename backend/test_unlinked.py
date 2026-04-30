@@ -14,9 +14,9 @@ def test_unlinked_completion():
     print("Starting unlinked completion test...")
     from app.auth import get_current_user
     app.dependency_overrides[get_current_user] = lambda: {"username": "admin", "role": "admin"}
-    
+
     db = SessionLocal()
-    
+
     # Create patient
     import uuid
     uid = str(uuid.uuid4())[:8]
@@ -24,7 +24,7 @@ def test_unlinked_completion():
     db.add(patient)
     db.commit()
     db.refresh(patient)
-    
+
     # 1. Create appointment directly in DB so it bypasses create_appointment logic
     # This simulates a pre-existing old appointment
     appt = Appointment(
@@ -36,7 +36,7 @@ def test_unlinked_completion():
     db.add(appt)
     db.commit()
     db.refresh(appt)
-    
+
     # 2. Create membership directly in DB
     mem = Membership(
         patient_id=patient.id,
@@ -49,20 +49,20 @@ def test_unlinked_completion():
     db.add(mem)
     db.commit()
     db.refresh(mem)
-    
+
     print(f"Created Patient {patient.id}, Appt {appt.id}, Mem {mem.id}")
-    
+
     # 3. Call complete endpoint
     response = client.post(f"/appointments/{appt.id}/complete", params={"notes": "Finalized"})
     print("Complete Response:", response.status_code)
-    
+
     # 4. Check DB
     db.refresh(appt)
     db.refresh(mem)
-    
+
     print(f"Appt {appt.id}: Status={appt.status}, Membership_id={appt.membership_id}")
     print(f"Mem {mem.id}: Used={mem.used_sessions}, Active={mem.is_active}")
-    
+
     if appt.membership_id == mem.id and mem.used_sessions == 1:
         print("TEST PASSED: Unlinked appointment successfully linked to active membership upon completion.")
     else:

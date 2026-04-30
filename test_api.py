@@ -4,7 +4,7 @@ BASE_URL = "http://127.0.0.1:8000"
 
 def test_api():
     print("1. Login...")
-    resp = requests.post(f"{BASE_URL}/auth/login", data={"username": "demo@medizen.com", "password": "password"}) # use default or create user if needed. 
+    resp = requests.post(f"{BASE_URL}/auth/login", data={"username": "demo@medizen.com", "password": "password"}) # use default or create user if needed.
     if resp.status_code != 200:
         print("Login failed, response:", resp.text)
         # Try another password or just create a user
@@ -21,14 +21,14 @@ def test_api():
         if resp.status_code != 200:
             print("Login failed again!")
             return
-            
+
     token = resp.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
-    
+
     print("\n2. Get Membership Plans...")
     resp = requests.get(f"{BASE_URL}/membership-plans/", headers=headers)
     print("GET Plans:", resp.status_code, resp.json())
-    
+
     print("\n3. Create Membership Plan...")
     plan_data = {
         "name": "Test Script Plan",
@@ -41,13 +41,13 @@ def test_api():
     }
     resp = requests.post(f"{BASE_URL}/membership-plans/", headers=headers, json=plan_data)
     print("POST Plan:", resp.status_code, resp.json())
-    
+
     if resp.status_code == 200:
         plan_id = resp.json()["id"]
         print(f"\n4. Delete Membership Plan ({plan_id})...")
         resp = requests.delete(f"{BASE_URL}/membership-plans/{plan_id}", headers=headers)
         print("DELETE Plan:", resp.status_code, resp.json())
-        
+
         print("\n5. Get Membership Plans after delete...")
         resp = requests.get(f"{BASE_URL}/membership-plans/", headers=headers)
         print("GET Plans:", resp.status_code, resp.json())

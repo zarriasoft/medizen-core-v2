@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
@@ -18,8 +18,9 @@ export default function Login() {
         try {
             await login(email, password);
             navigate('/portal');
-        } catch (err: any) {
-            setError(err.response?.data?.detail || 'Error al iniciar sesión. Verifica tus credenciales.');
+        } catch (err: unknown) {
+            const error = err as { response?: { data?: { detail?: string } } };
+            setError(error?.response?.data?.detail || 'Error al iniciar sesión. Verifica tus credenciales.');
         } finally {
             setIsLoading(false);
         }
@@ -27,7 +28,7 @@ export default function Login() {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-            <motion.div 
+            <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl border border-slate-100"
@@ -46,9 +47,9 @@ export default function Login() {
                 <form onSubmit={handleSubmit} className="space-y-5">
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Correo Electrónico</label>
-                        <input 
-                            type="email" 
-                            required 
+                        <input
+                            type="email"
+                            required
                             className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
                             value={email}
                             onChange={e => setEmail(e.target.value)}
@@ -56,17 +57,17 @@ export default function Login() {
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Contraseña</label>
-                        <input 
-                            type="password" 
-                            required 
+                        <input
+                            type="password"
+                            required
                             className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
                             value={password}
                             onChange={e => setPassword(e.target.value)}
                         />
                     </div>
-                    
-                    <button 
-                        type="submit" 
+
+                    <button
+                        type="submit"
                         disabled={isLoading}
                         className={`w-full py-3 rounded-xl text-white font-bold transition-all ${
                             isLoading ? 'bg-slate-400' : 'bg-brand-dark hover:bg-slate-800 active:scale-95 shadow-lg'
